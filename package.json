@@ -1,0 +1,6 @@
+{
+	"name" : "showdownbot",
+	"dependencies" : {
+		"sockjs-client-ws" : "0.1.0"
+	}
+}
