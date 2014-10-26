@@ -2,6 +2,8 @@
 	"name" : "showdownbot",
 	"dependencies" : {
 		"sockjs-client-ws" : "0.1.0",
-		"request" : "2.x"
+		"request" : "2.x",
+		"log4js" : "0.6.21",
+		"jsclass" : "4.x"
 	}
 }
