@@ -1,5 +1,6 @@
 {
 	"name" : "showdownbot",
+	"description" : "AI bot for playing Pokemon Showdown.",
 	"dependencies" : {
 		"sockjs-client-ws" : "0.1.0",
 		"request" : "2.x",

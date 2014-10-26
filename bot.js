@@ -3,8 +3,7 @@ var request = require('request');
 var tools = require('./tools');
 
 // Setup Logging
-var log4js = require('log4js');
-var logger = log4js.getLogger();
+var logger = require('log4js').getLogger();
 
 var client = sockjs.create("http://sim.smogon.com:8000/showdown");
 var ACTION_PHP = "http://play.pokemonshowdown.com/~~showdown/action.php";
@@ -12,6 +11,8 @@ var account = require("./account.json");
 
 var CHALLENGE_KEY_ID = null;
 var CHALLENGE = null;
+
+var BattleRoom = require('./battleroom');
 
 function send(data, room) {
 	if (room && room !== 'lobby' && room !== true) {
@@ -49,6 +50,22 @@ function rename(name, password) {
 }
 
 var ROOMS = {};
+function addRoom(id, type) {
+	if(type == "battle") {
+		ROOMS[id] = new BattleRoom(id);
+		return ROOMS[id];
+	} else {
+		logger.error("Unkown room type: " + type);
+	}
+}
+function removeRoom(id) {
+	var room = ROOMS[id];
+	if(room) {
+		delete ROOMS[id];
+		return true;
+	}
+	return false;
+}
 
 function recieve(data) {
 	logger.trace("<< " + data);
@@ -68,7 +85,7 @@ function recieve(data) {
 		roomType = tools.toId(roomType);
 
 		logger.info(roomid + " is being opened.");
-		addRoom(roomid, roomType, true);
+		addRoom(roomid, roomType);
 
 	} else if ((data+'|').substr(0,8) === '|expire|') {
 		var room = ROOMS[roomid];
@@ -91,6 +108,8 @@ function recieve(data) {
 	if(roomid) {
 		if(ROOMS[roomid]) {
 			ROOMS[roomid].recieve(data);
+		} else {
+			log.error("Room of id " + roomid + " does not exist to send data to.");
 		}
 		return;
 	}
@@ -128,7 +147,13 @@ function recieve(data) {
 
 			if(name == account.username) {
 				logger.info("Successfully logged in.");
+
+				logger.info("Searching for an unranked random battle");
+				send("/search unratedrandombattle ");
 			}
+			break;
+		case 'popup':
+			logger.info("Popup: " + data.substr(7).replace(/\|\|/g, '\n'));
 			break;
 		default:
 			logger.warn("Did not recognize command of type: " + parts[0]);
