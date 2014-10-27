@@ -73,7 +73,7 @@ module.exports = new JS.Class({
 	makeSwitch: function(rqid, pokemon) {
 		var choices = [];
 		for(var i = 0; i < pokemon.length; ++i) {
-			if(!pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active)
+			if(pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active)
 				choices.push(i + 1);
 		}
 		var choice = choices[Math.floor(Math.random()*choices.length)];

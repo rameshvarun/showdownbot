@@ -20,6 +20,8 @@ var CHALLENGE = null;
 
 var BattleRoom = require('./battleroom');
 
+var GAME_TYPE = "unratedrandombattle";
+
 function send(data, room) {
 	if (room && room !== 'lobby' && room !== true) {
 		data = room+'|'+data;
@@ -155,12 +157,22 @@ function recieve(data) {
 				logger.info("Successfully logged in.");
 
 				logger.info("Searching for an unranked random battle");
-				send("/search unratedrandombattle ");
+				send("/search " + GAME_TYPE);
 			}
 			break;
 		case 'popup':
 			logger.info("Popup: " + data.substr(7).replace(/\|\|/g, '\n'));
 			break;
+		case 'updatechallenges':
+			var challenges = JSON.parse(data.substr(18));
+			if(challenges.challengesFrom) {
+				for(var user in challenges.challengesFrom) {
+					if(challenges.challengesFrom[user] == "randombattle") {
+						logger.info("Accepting challenge from " + user);
+						send("/accept " + user);
+					}
+				}
+			}
 		default:
 			logger.warn("Did not recognize command of type: " + parts[0]);
 			break;
