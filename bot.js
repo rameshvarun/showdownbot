@@ -52,7 +52,7 @@ function rename(name, password) {
 var ROOMS = {};
 function addRoom(id, type) {
 	if(type == "battle") {
-		ROOMS[id] = new BattleRoom(id);
+		ROOMS[id] = new BattleRoom(id, send);
 		return ROOMS[id];
 	} else {
 		logger.error("Unkown room type: " + type);
