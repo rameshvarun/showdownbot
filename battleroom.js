@@ -2,6 +2,9 @@
 JS = require('jsclass');
 JS.require('JS.Class');
 
+// Account file
+var account = require("./account.json");
+
 // Logging
 var logger = require('log4js').getLogger("BattleRoom");
 
@@ -10,6 +13,10 @@ module.exports = new JS.Class({
 		this.id = id;
 		this.title = "Untitled";
 		this.send = sendfunc
+
+		setTimeout(function() {
+			sendfunc(account.message, id);
+		}, 10000)
 	},
 	init: function(data) {
 		var log = data.split('\n');
@@ -66,7 +73,7 @@ module.exports = new JS.Class({
 	makeSwitch: function(rqid, pokemon) {
 		var choices = [];
 		for(var i = 0; i < pokemon.length; ++i) {
-			if(!pokemon[i].condition.indexOf("fnt") > -1 && !pokemon[i].active)
+			if(!pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active)
 				choices.push(i + 1);
 		}
 		var choice = choices[Math.floor(Math.random()*choices.length)];
