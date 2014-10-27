@@ -5,6 +5,9 @@ JS.require('JS.Class');
 // Account file
 var account = require("./account.json");
 
+// Results database
+var db = require("./db")
+
 // Logging
 var logger = require('log4js').getLogger("BattleRoom");
 
@@ -17,6 +20,8 @@ module.exports = new JS.Class({
 		setTimeout(function() {
 			sendfunc(account.message, id);
 		}, 10000)
+
+		//TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
 	},
 	init: function(data) {
 		var log = data.split('\n');
