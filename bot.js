@@ -1,3 +1,9 @@
+// Command-line Arguments
+var program = require('commander');
+program
+	.option('--host [url]', 'The websocket endpoint of the host to try to connect to. ["http://sim.smogon.com:8000/showdown"]', 'http://sim.smogon.com:8000/showdown')
+	.parse(process.argv);
+
 var sockjs = require('sockjs-client-ws');
 var request = require('request');
 var tools = require('./tools');
@@ -5,7 +11,7 @@ var tools = require('./tools');
 // Setup Logging
 var logger = require('log4js').getLogger();
 
-var client = sockjs.create("http://sim.smogon.com:8000/showdown");
+var client = sockjs.create(program.host);
 var ACTION_PHP = "http://play.pokemonshowdown.com/~~showdown/action.php";
 var account = require("./account.json");
 
