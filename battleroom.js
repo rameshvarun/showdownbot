@@ -35,6 +35,24 @@ module.exports = new JS.Class({
 		if (data.substr(0,9) === '|request|') {
 			return this.receiveRequest(JSON.parse(data.substr(9)));
 		}
+
+		var log = data.split('\n');
+		for (var i = 0; i < log.length; i++) {
+			var logLine = log[i];
+
+			if (logLine.substr(0, 5) === '|win|') {
+				this.send("Good game!", this.id);
+
+				this.winner = logLine.substr(5);
+				if(this.winner == account.username) {
+					logger.info(this.title + ": I won this game");
+				} else {
+					logger.info(this.title + ": I lost this game");
+				}
+
+				this.send("/leave " + this.id)
+			}
+		}
 	},
 	receiveRequest: function(request) {
 		if (!request) {
