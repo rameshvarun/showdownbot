@@ -213,6 +213,9 @@ module.exports = new JS.Class({
 			this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
 
 			// Update the pokemon object with latest status conditions
+			for(var stat in pokemon.stats) {
+				this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
+			}
 		}
 
 		this.side = sideData.id;
