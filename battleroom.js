@@ -11,12 +11,18 @@ var db = require("./db");
 // Logging
 var logger = require('log4js').getLogger("BattleRoom");
 
+//battle-engine
+var BattleEngine = require('./battle-engine');
+var BattlePokemon = BattleEngine.BattlePokemon;
+var BattleSide = BattleEngine.BattleSide;
+var Battle = BattleEngine.Battle;
+
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
 		this.id = id;
 		this.title = "Untitled";
 		this.send = sendfunc;
-                this.opponentState = {};
+                this.state = new Battle();
 
 		setTimeout(function() {
 			sendfunc(account.message, id);
@@ -37,6 +43,53 @@ module.exports = new JS.Class({
 			logger.info("Title for " + this.id + " is " + this.title);
 		}
 	},
+        processData: function(data) {
+            //This is data reported by the server. Parse each line of code.
+            //Different things to parse:
+            //1. |switch|p1a: Pokemon|POkemon, L70|264/264
+            //2. |move|p1a: Ho-oh|Tailwind|pqa: Ho-oh
+
+            //The rest are possible side effects... Important to distinguish
+            //3. |-sidestart|p1: greedybot|move: Tailwind
+            //4. |-weather|Hail|[upkeep]
+            //5. |-damage|p1a: Ho-Oh|248/264|[from] hail
+            //6. |-heal|p1a: Ho-Oh|248/264|[from] Leftovers
+            //and various other messages... we can sift through the messages
+            var dataLines = data.split('\n');
+                var turn = '';
+            var myPlayerId = 'p1a'; //for now assume that we're p1
+            for(var i in data.split('\n')) {
+                logger.trace('data data! ' + dataLines[i]);
+                var tokens = dataLines[i].split('|');
+                logger.trace(tokens);
+                if(tokens.length > 1) {
+                    if(tokens[1] === 'move') {
+                        logger.trace("a move!");
+                    } else if(tokens[1]  === 'switch') {
+                        //check if new Pokemon
+                        logger.trace('a switch!');
+                        var playerTokens = tokens[2].split(' ');
+                        var isNew = true;
+                        if(playerTokens[0] === myPlayerId) {
+                            this.state.playerState.pokemon
+                                .forEach(function(pokemon) {
+                                             if(pokemon.name ===
+                                                playerTokens[1]) {
+                                                 isNew = false;
+                                             }
+                                         });
+                            if(isNew) {
+                                this.state.playerState.pokemon.push(new
+                                                                    BattlePokemon(playerTokens[1],
+                            }
+                        }
+                        //restore Pokemon state otherwise
+                    } else if(tokens[1] === 'faint') {
+                        logger.trace('a ko!');
+                    }
+                }
+            }
+        },
 	recieve: function(data) {
 		if (!data) return;
 		if (data.substr(0,6) === '|init|') {
@@ -46,29 +99,8 @@ module.exports = new JS.Class({
 			return this.receiveRequest(JSON.parse(data.substr(9)));
 		}
             if(data.substr(0,3) === '\n|\n') {
-                //This is data reported by the server. Parse each line of code.
-                //Different things to parse:
-                //1. |switch|p1a: Pokemon|POkemon, L70|264/264
-                //2. |move|p1a: Ho-oh|Tailwind|pqa: Ho-oh
-
-                //The rest are possible side effects... Important to distinguish
-                //3. |-sidestart|p1: greedybot|move: Tailwind
-                //4. |-weather|Hail|[upkeep]
-                //5. |-damage|p1a: Ho-Oh|248/264|[from] hail
-                //6. |-heal|p1a: Ho-Oh|248/264|[from] Leftovers
-                //and various other messages... we can sift through the messages
-                logger.trace(data);
+                this.processData(data);
             }
-            //logger.info("data bit: " + data.substr(0,10));
-            /*
-                if (data.substr(0,6) === '|move|') {
-                    logger.info("move:" + data);
-                }
-            if (data.substr(0,8) === '|switch|') {
-                    logger.info("switch:" + data);
-                }*/
-
-
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
 			var logLine = log[i];
