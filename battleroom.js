@@ -22,6 +22,10 @@ module.exports = new JS.Class({
 			sendfunc(account.message, id);
 		}, 10000);
 
+		setTimeout(function() {
+			sendfunc("/timer", id)
+		}, 10000)
+
 		//TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
 	},
 	init: function(data) {
