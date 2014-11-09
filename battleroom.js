@@ -2,6 +2,8 @@
 JS = require('jsclass');
 JS.require('JS.Class');
 
+require("sugar")
+
 // Account file
 var account = require("./account.json");
 
@@ -15,6 +17,9 @@ log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
 
 //battle-engine
 var Battle = require('./battle-engine/battle');
+
+var Abilities = require("./data/abilities").BattleAbilities
+var Items = require("./data/items").BattleItems
 
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
@@ -92,6 +97,9 @@ module.exports = new JS.Class({
         },
 	recieve: function(data) {
 		if (!data) return;
+
+		logger.trace("<< " + data);
+
 		if (data.substr(0,6) === '|init|') {
 			return this.init(data);
 		}
@@ -151,12 +159,53 @@ module.exports = new JS.Class({
 		this.choice = null;
 		this.request = request;
 		if (request.side) {
-			this.updateSideLocation(request.side, true);
+			this.updateSide(request.side, true);
 		}
 		this.notifyRequest();
 	},
-	updateSideLocation: function(sideData, midBattle) {
-		if (!sideData.id) return;
+	updateSide: function(sideData) {
+		if(!sideData || !sideData.id) return;
+
+		logger.info("Starting to update my side data.");
+		for(var i = 0; i < sideData.pokemon.length; ++i) {
+			var pokemon = sideData.pokemon[i];
+
+			var details = pokemon.details.split(",");
+			var name = details[0].trim()
+			var level = parseInt(details[1].trim().substring(1));
+			var gender = details[2] ? details[2].trim() : null;
+
+			var template = {
+				name : name,
+				moves : pokemon.moves,
+				ability : Abilities[pokemon.baseAbility].name,
+				evs : {
+					hp: 85,
+					atk: 85,
+					def: 85,
+					spa: 85,
+					spd: 85,
+					spe: 85
+				},
+				ivs : {
+					hp: 31,
+					atk: 31,
+					def: 31,
+					spa: 31,
+					spd: 31,
+					spe: 31
+				},
+				item : Items[pokemon.item].name,
+				level : level,
+				shiny : false
+			}
+
+			// Initialize pokemon
+			this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
+
+			// Update the pokemon object with latest status conditions
+		}
+
 		this.side = sideData.id;
 		logger.info(this.title + ": My current side is " + this.side);
 	},

@@ -169,6 +169,8 @@ BattlePokemon = (function () {
 		this.baseHpPower = this.hpPower;
 
 		this.clearVolatile(true);
+
+		logger.trace("Created pokemon " + this.toString());
 	}
 
 	BattlePokemon.prototype.trapped = false;

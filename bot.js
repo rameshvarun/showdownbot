@@ -126,7 +126,6 @@ function recieve(data) {
 		if (nlIndex < 0) return;
 		roomid = util.toRoomid(data.substr(1,nlIndex-1));
 		data = data.substr(nlIndex+1);
-            logger.trace("<<<<<<< " + data);
 	}
 	if (data.substr(0,6) === '|init|') { // If it is an init command, create the room
 		if (!roomid) roomid = 'lobby';
