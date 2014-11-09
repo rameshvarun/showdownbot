@@ -22,10 +22,11 @@ module.exports = new JS.Class({
 		this.id = id;
 		this.title = "Untitled";
 		this.send = sendfunc;
-                this.state = Battle.construct(id, 'base', false);
-                this.state.join('p1','botPlayer');
-                this.state.join('p2','humanPlayer');
-                //for now, assume that we are p1
+
+		//for now, assume that we are p1
+        this.state = Battle.construct(id, 'base', false);
+        this.state.join('p1','botPlayer');
+        this.state.join('p2','humanPlayer');
 
 		setTimeout(function() {
 			sendfunc(account.message, id); // Notify User that this is a bot
