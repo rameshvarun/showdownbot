@@ -22,8 +22,9 @@ module.exports = new JS.Class({
 		this.id = id;
 		this.title = "Untitled";
 		this.send = sendfunc;
-                this.state = new Battle();
-
+                this.state = Battle.construct(id, 'base', false);
+                this.state.join('p1','botPlayer');
+                this.state.join('p2','humanPlayer');
                 //for now, assume that we are p1
 
 		setTimeout(function() {
@@ -56,7 +57,7 @@ module.exports = new JS.Class({
             //and various other messages... we can sift through the messages
             var dataLines = data.split('\n');
                 var turn = '';
-            var myPlayerId = 'p1a'; //for now assume that we're p1
+
             for(var i in data.split('\n')) {
                 logger.trace('data data! ' + dataLines[i]);
                 var tokens = dataLines[i].split('|');

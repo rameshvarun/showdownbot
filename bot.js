@@ -5,7 +5,7 @@ program
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server
-var tools = require('./tools'); // Various utilities
+var util = require('./util');
 
 var logger = require('log4js').getLogger(); // Setup Logging
 
@@ -65,7 +65,7 @@ function rename(name, password) {
 		}
 	},
 	function (err, response, body) {
-		var data = tools.safeJSON(body);
+		var data = util.safeJSON(body);
 		if(data && data.curuser && data.curuser.loggedin) {
 			send("/trn " + account.username + ",0," + data.assertion);
 		} else {
@@ -120,7 +120,7 @@ function recieve(data) {
 	if (data.substr(0,1) === '>') { // First determine if this command is for a room
 	    var nlIndex = data.indexOf('\n');
 		if (nlIndex < 0) return;
-		roomid = tools.toRoomid(data.substr(1,nlIndex-1));
+		roomid = util.toRoomid(data.substr(1,nlIndex-1));
 		data = data.substr(nlIndex+1);
             logger.trace("<<<<<<< " + data);
 	}
@@ -129,7 +129,7 @@ function recieve(data) {
 		var roomType = data.substr(6);
 		var roomTypeLFIndex = roomType.indexOf('\n');
 		if (roomTypeLFIndex >= 0) roomType = roomType.substr(0, roomTypeLFIndex);
-		roomType = tools.toId(roomType);
+		roomType = util.toId(roomType);
 
 		logger.info(roomid + " is being opened.");
 		addRoom(roomid, roomType);

@@ -10,7 +10,7 @@
  * @license MIT license
  */
 
-//require('sugar');
+require('sugar');
 
 //global.Config = require('./config/config.js');
 
@@ -69,76 +69,6 @@ global.Tools = require('./tools.js');
 var Battle, BattleSide, BattlePokemon;
 
 var Battles = {};
-
-// Receive and process a message sent using Simulator.prototype.send in
-// another process.
-process.on('message', function (message) {
-	//console.log('CHILD MESSAGE RECV: "' + message + '"');
-	var nlIndex = message.indexOf("\n");
-	var more = '';
-	if (nlIndex > 0) {
-		more = message.substr(nlIndex + 1);
-		message = message.substr(0, nlIndex);
-	}
-	var data = message.split('|');
-	if (data[1] === 'init') {
-		if (!Battles[data[0]]) {
-			try {
-				Battles[data[0]] = Battle.construct(data[0], data[2], data[3]);
-			} catch (err) {
-				var stack = err.stack + '\n\n' +
-						'Additional information:\n' +
-						'message = ' + message;
-				var fakeErr = {stack: stack};
-
-				if (!require('./crashlogger.js')(fakeErr, 'A battle')) {
-					var ministack = ("" + err.stack).escapeHTML().split("\n").slice(0, 2).join("<br />");
-					process.send(data[0] + '\nupdate\n|html|<div class="broadcast-red"><b>A BATTLE PROCESS HAS CRASHED:</b> ' + ministack + '</div>');
-				} else {
-					process.send(data[0] + '\nupdate\n|html|<div class="broadcast-red"><b>The battle crashed!</b><br />Don\'t worry, we\'re working on fixing it.</div>');
-				}
-			}
-		}
-	} else if (data[1] === 'dealloc') {
-		if (Battles[data[0]]) Battles[data[0]].destroy();
-		delete Battles[data[0]];
-	} else {
-		var battle = Battles[data[0]];
-		if (battle) {
-			var prevRequest = battle.currentRequest;
-			var prevRequestDetails = battle.currentRequestDetails || '';
-			try {
-				battle.receive(data, more);
-			} catch (err) {
-				var stack = err.stack + '\n\n' +
-						'Additional information:\n' +
-						'message = ' + message + '\n' +
-						'currentRequest = ' + prevRequest + '\n\n' +
-						'Log:\n' + battle.log.join('\n').replace(/\n\|split\n[^\n]*\n[^\n]*\n[^\n]*\n/g, '\n');
-				var fakeErr = {stack: stack};
-				require('./crashlogger.js')(fakeErr, 'A battle');
-
-				var logPos = battle.log.length;
-				battle.add('html', '<div class="broadcast-red"><b>The battle crashed</b><br />You can keep playing but it might crash again.</div>');
-				var nestedError;
-				try {
-					battle.makeRequest(prevRequest, prevRequestDetails);
-				} catch (e) {
-					nestedError = e;
-				}
-				battle.sendUpdates(logPos);
-				if (nestedError) {
-					throw nestedError;
-				}
-			}
-		} else if (data[1] === 'eval') {
-			try {
-				eval(data[2]);
-			} catch (e) {}
-		}
-	}
-});
-
 BattlePokemon = (function () {
 	function BattlePokemon(set, side) {
 		this.side = side;
