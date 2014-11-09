@@ -3,12 +3,24 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
+<a href="/search" class="btn btn-primary" href="#" role="button">Search for Match</a>
+
 <h1>Current Games</h1>
 
 {% for game in games %}
 Title:
 {{game.title}}
 <a href="{{domain}}{{game.id}}" class="btn btn-primary" href="#" role="button">Spectate</a>
+{% endfor %}
+
+<h1>History</h1>
+{% for game in history %}
+<div class="panel {% if game.win %}panel-success{% else %}panel-danger{% endif %}">
+	<div class="panel-heading">{{game.title}} {% if game.win %}(Win){% else %}(Loss){% endif %}</div>
+	<div class="panel-body">
+		<a href="http://replay.pokemonshowdown.com/{{game.id}}" class="btn btn-primary" href="#" role="button">Watch Replay</a>
+	</div>
+</div>
 {% endfor %}
 
 {% endblock %}
