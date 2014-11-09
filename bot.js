@@ -17,8 +17,12 @@ var webconsole = require("./console.js");// Web console
 var sockjs = require('sockjs-client-ws');
 var client = sockjs.create(program.host);
 
+// Domain (replay button redirects here)
+var DOMAIN = "http://play.pokemonshowdown.com/";
+exports.DOMAIN = DOMAIN;
+
 // PHP endpoint used to login / authenticate
-var ACTION_PHP = "http://play.pokemonshowdown.com/~~showdown/action.php";
+var ACTION_PHP = DOMAIN + "~~showdown/action.php";
 
 // Values that need to be globally stored in order to login properly
 var CHALLENGE_KEY_ID = null;
@@ -74,6 +78,8 @@ function rename(name, password) {
 
 // Global room counter (this allows multiple battles at the same time)
 var ROOMS = {};
+exports.ROOMS = ROOMS;
+
 // Add a new room (only supports rooms of type battle)
 function addRoom(id, type) {
 	if(type == "battle") {

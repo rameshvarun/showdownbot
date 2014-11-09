@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>Current Games</h1>
+
+{% for game in games %}
+Title:
+{{game.title}}
+<a href="{{domain}}{{game.id}}" class="btn btn-primary" href="#" role="button">Spectate</a>
+{% endfor %}
+
+{% endblock %}
