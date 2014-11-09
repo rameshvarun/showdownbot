@@ -7,7 +7,11 @@ program
 var request = require('request'); // Used for making post requests to login server
 var util = require('./util');
 
-var logger = require('log4js').getLogger(); // Setup Logging
+// Setup Logging
+var log4js = require('log4js');
+log4js.loadAppender('file');
+var logger = require('log4js').getLogger("bot");
+log4js.addAppender(log4js.appenders.file('logs/bot.log'), 'bot');
 
 var account = require("./account.json"); // Login information for this bot
 

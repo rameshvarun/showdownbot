@@ -8,6 +8,11 @@ var db = require("./db");
 
 var _ = require("underscore")
 
+// Setup Logging
+var log4js = require('log4js');
+var logger = require('log4js').getLogger("webconsole");
+log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
+
 nunjucks.configure('templates', {
 	autoescape: true,
 	express: app,
@@ -25,10 +30,12 @@ app.get('/', function(req, res){
 });
 
 app.get('/search', function(req, res){
+	logger.debug("Asked to query from web console.");
 	bot.searchBattle();
 	res.redirect("/");
 });
 
 app.listen(3000);
+logger.info("Started web console.");
 
 module.exports = app;

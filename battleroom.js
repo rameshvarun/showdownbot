@@ -9,13 +9,12 @@ var account = require("./account.json");
 var db = require("./db");
 
 // Logging
-var logger = require('log4js').getLogger("BattleRoom");
+var log4js = require('log4js');
+var logger = require('log4js').getLogger("battleroom");
+log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
 
 //battle-engine
-var BattleEngine = require('./battle-engine');
-var BattlePokemon = BattleEngine.BattlePokemon;
-var BattleSide = BattleEngine.BattleSide;
-var Battle = BattleEngine.Battle;
+var Battle = require('./battle-engine/battle');
 
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
@@ -99,9 +98,7 @@ module.exports = new JS.Class({
 		if (data.substr(0,9) === '|request|') {
 			return this.receiveRequest(JSON.parse(data.substr(9)));
 		}
-            if(data.substr(0,3) === '\n|\n') {
-                this.processData(data);
-            }
+
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
 			var logLine = log[i];
