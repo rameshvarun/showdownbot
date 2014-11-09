@@ -13,7 +13,9 @@ var db = require("./db");
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battleroom");
+var decisionslogger = require('log4js').getLogger("decisions");
 log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
+log4js.addAppender(log4js.appenders.file('logs/decisions.log'), 'decisions');
 
 //battle-engine
 var Battle = require('./battle-engine/battle');
@@ -40,6 +42,8 @@ module.exports = new JS.Class({
 		sendfunc(account.message, id); // Notify User that this is a bot
 		sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
 	    }, 10000);
+
+	    this.decisions = [];
 	},
 	init: function(data) {
 		var log = data.split('\n');
@@ -131,7 +135,7 @@ module.exports = new JS.Class({
                             var tokens2 = tokens[2].split(' ');
                             if(tokens2[0] === 'p2a:') {
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
-                                logger.info(this.oppPokemon);
+                                logger.info("Oppnent Switches To: " + this.oppPokemon.name);
                             }
                         } else if(tokens[1] === 'move') {
 
@@ -242,32 +246,74 @@ module.exports = new JS.Class({
 		this.send("/choose move " + move.move + "|" + rqid,this.id);
 	},
 	makeSwitch: function(rqid, pokemon) {
+		var decision = {
+			prompt: "I need to switch to a pokemon that opposes " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
+			choices: [],
+			choice: "",
+			reason: ""
+		};
+
 		var choices = [];
 		for(var i = 0; i < pokemon.length; ++i) {
-			if(pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active)
+			if(pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active) {
+				decision.choices.push(this.state.p1.pokemon[i].name + " - " + JSON.stringify(this.state.p1.pokemon[i].getTypes()));
 				choices.push(i);
+			}
 		}
 
 		var battleroom = this;
+		var choice = undefined; // Pick best pokemon
 
-		var scores = {}
-		var reason = {}
-		_.each(choices, function(choice) {
-			var pokemon = battleroom.state.p1.pokemon[choice];
-			scores[choice] = 0;
-			reason[choice] = pokemon.name + " - " + scores[choice];
-		});
-		choices.sort(function(a, b) {
-			return scores[b] - scores[a];
-		});
-
-		// Print reasons
-		_.each(choices, function(choice) {
-			logger.debug(reason[choice])
+		// Find Pokemon that is immune to both of the opponent Pokemon’s types
+		choice = _.find(choices, function(i) {
+			var pokemon = battleroom.state.p1.pokemon[i];
+			var immune = _.all(battleroom.oppPokemon.getTypes(), function(type) {
+				return !Tools.getImmunity(type, pokemon);
+			});
+			if(immune) decision.reason = "We are immune to the opposing pokemon type.";
+			return immune;
 		});
 
-		var choice = choices[0]; // Pick best pokemon
+		// Find Pokemon that resists both of opponents types
+		// TODO(rameshvarun): Sort by amount of resistivity
+		if(!choice) {
+			choice = _.find(choices, function(i) {
+				var pokemon = battleroom.state.p1.pokemon[i];
+				var canresist = _.all(battleroom.oppPokemon.getTypes(), function(type) {
+					return Tools.getEffectiveness(type, pokemon) < 0;
+				});
+				if(canresist) decision.reason = "We can resist both opposing pokemon types.";
+				return canresist;
+			});
+		}
+
+		// Choose pokemon that can deal super effective damage to the oppenents pokemon
+		// TODO(rameshvarun): Sort by how super effective
+		if(!choice) {
+			choice = _.find(choices, function(i) {
+				var pokemon = battleroom.state.p1.pokemon[i];
+				var moveName = "";
+				var supereffective = _.any(pokemon.getMoves(), function(move) {
+					moveName = move.move;
+					var moveData = Tools.getMove(move.id);
+					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0;
+				});
+				if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
+				return supereffective;
+			});
+		}
+
+		// If none of the Pokemon satisfy any of the above properties, choose the next Pokemon from the possible Pokemon that can be chosen.
+		if(!choice) {
+			choice = choices[0];
+			decision.reason = "Could not satisfy other constraints.";
+		}
+		decision.choice = battleroom.state.p1.pokemon[choice].name;
 		this.send("/choose switch " + (choice + 1) + "|" + rqid, this.id);
+
+		// Save to decision log
+		decisionslogger.info("Decision: " + JSON.stringify(decision));
+		this.decisions.push(decision);
 	},
 	notifyRequest: function() {
             /*for(key in this.request) {
