@@ -21,6 +21,8 @@ var Battle = require('./battle-engine/battle');
 var Abilities = require("./data/abilities").BattleAbilities
 var Items = require("./data/items").BattleItems
 
+var _ = require("underscore")
+
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
 		this.id = id;
@@ -203,10 +205,12 @@ module.exports = new JS.Class({
 			// Initialize pokemon
 			this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
 
-			// Update the pokemon object with latest status conditions
+			// Update the pokemon object with latest stats
 			for(var stat in pokemon.stats) {
 				this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
 			}
+
+			// TODO(rameshvarun): Somehow parse / load in current hp and status conditions
 		}
 
 		this.side = sideData.id;
@@ -230,10 +234,29 @@ module.exports = new JS.Class({
 		var choices = [];
 		for(var i = 0; i < pokemon.length; ++i) {
 			if(pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active)
-				choices.push(i + 1);
+				choices.push(i);
 		}
-		var choice = choices[Math.floor(Math.random()*choices.length)];
-		this.send("/choose switch " + choice + "|" + rqid, this.id);
+
+		var battleroom = this;
+
+		var scores = {}
+		var reason = {}
+		_.each(choices, function(choice) {
+			var pokemon = battleroom.state.p1.pokemon[choice];
+			scores[choice] = 0;
+			reason[choice] = pokemon.name + " - " + scores[choice];
+		});
+		choices.sort(function(a, b) {
+			return scores[b] - scores[a];
+		});
+
+		// Print reasons
+		_.each(choices, function(choice) {
+			logger.debug(reason[choice])
+		});
+
+		var choice = choices[0]; // Pick best pokemon
+		this.send("/choose switch " + (choice + 1) + "|" + rqid, this.id);
 	},
 	notifyRequest: function() {
             /*for(key in this.request) {
