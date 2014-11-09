@@ -23,21 +23,20 @@ var Items = require("./data/items").BattleItems
 
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
-		this.id = id;
-		this.title = "Untitled";
-		this.send = sendfunc;
+	    this.id = id;
+	    this.title = "Untitled";
+	    this.send = sendfunc;
+            this.oppPokemon = '';
 
-		//for now, assume that we are p1
-        this.state = Battle.construct(id, 'base', false);
-        this.state.join('p1','botPlayer');
-        this.state.join('p2','humanPlayer');
+	    //for now, assume that we are p1
+            this.state = Battle.construct(id, 'base', false);
+            this.state.join('p1','botPlayer');
+            this.state.join('p2','humanPlayer');
 
-		setTimeout(function() {
-			sendfunc(account.message, id); // Notify User that this is a bot
-			sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
-		}, 10000);
-
-	        //TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
+	    setTimeout(function() {
+		sendfunc(account.message, id); // Notify User that this is a bot
+		sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
+	    }, 10000);
 	},
 	init: function(data) {
 		var log = data.split('\n');
@@ -109,21 +108,31 @@ module.exports = new JS.Class({
 
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
-			var logLine = log[i];
+                    var tokens = log[i].split('|');
+                    if(tokens.length > 1) {
+		        if (tokens[1] === 'win') {
+			    this.send("Good game!", this.id);
 
-			if (logLine.substr(0, 5) === '|win|') {
-				this.send("Good game!", this.id);
+			    this.winner = tokens[2];
+			    if(this.winner == account.username) {
+			        logger.info(this.title + ": I won this game");
+			    } else {
+			        logger.info(this.title + ": I lost this game");
+			    }
 
-				this.winner = logLine.substr(5);
-				if(this.winner == account.username) {
-					logger.info(this.title + ": I won this game");
-				} else {
-					logger.info(this.title + ": I lost this game");
-				}
+			    this.saveResult();
+			    this.send("/leave " + this.id);
+		        }
+                        if (tokens[1] === 'switch') {
+                            logger.info("Hey! Switcheroo!");
+                            var tokens2 = tokens[2].split(' ');
+                            if(tokens2[0] === 'p2a') {
+                                this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1], this.state.p2));
+                            }
+                        } else if(logLine.substr(0,6) === '|move|') {
 
-				this.saveResult();
-				this.send("/leave " + this.id);
-			}
+                        }
+                    }
 		}
 	},
 	saveResult: function() {
@@ -171,7 +180,7 @@ module.exports = new JS.Class({
 			var pokemon = sideData.pokemon[i];
 
 			var details = pokemon.details.split(",");
-			var name = details[0].trim()
+			var name = details[0].trim();
 			var level = parseInt(details[1].trim().substring(1));
 			var gender = details[2] ? details[2].trim() : null;
 
