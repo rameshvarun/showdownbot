@@ -6,7 +6,7 @@ JS.require('JS.Class');
 var account = require("./account.json");
 
 // Results database
-var db = require("./db")
+var db = require("./db");
 
 // Logging
 var logger = require('log4js').getLogger("BattleRoom");
@@ -15,11 +15,12 @@ module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
 		this.id = id;
 		this.title = "Untitled";
-		this.send = sendfunc
+		this.send = sendfunc;
+                this.opponentState = {};
 
 		setTimeout(function() {
 			sendfunc(account.message, id);
-		}, 10000)
+		}, 10000);
 
 		//TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
 	},
@@ -40,6 +41,29 @@ module.exports = new JS.Class({
 		if (data.substr(0,9) === '|request|') {
 			return this.receiveRequest(JSON.parse(data.substr(9)));
 		}
+            if(data.substr(0,3) === '\n|\n') {
+                //This is data reported by the server. Parse each line of code.
+                //Different things to parse:
+                //1. |switch|p1a: Pokemon|POkemon, L70|264/264
+                //2. |move|p1a: Ho-oh|Tailwind|pqa: Ho-oh
+
+                //The rest are possible side effects... Important to distinguish
+                //3. |-sidestart|p1: greedybot|move: Tailwind
+                //4. |-weather|Hail|[upkeep]
+                //5. |-damage|p1a: Ho-Oh|248/264|[from] hail
+                //6. |-heal|p1a: Ho-Oh|248/264|[from] Leftovers
+                //and various other messages... we can sift through the messages
+                logger.trace(data);
+            }
+            //logger.info("data bit: " + data.substr(0,10));
+            /*
+                if (data.substr(0,6) === '|move|') {
+                    logger.info("move:" + data);
+                }
+            if (data.substr(0,8) === '|switch|') {
+                    logger.info("switch:" + data);
+                }*/
+
 
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
@@ -55,7 +79,7 @@ module.exports = new JS.Class({
 					logger.info(this.title + ": I lost this game");
 				}
 
-				this.send("/leave " + this.id)
+				this.send("/leave " + this.id);
 			}
 		}
 	},
@@ -90,6 +114,16 @@ module.exports = new JS.Class({
 		logger.info(this.title + ": My current side is " + this.side);
 	},
 	makeMove: function(rqid, moves) {
+                //TODO(harrison8989): choose mega evolution when possible
+                //TODO(harrison8989): implement greedy algorithm
+                /*
+                  Steps to victory:
+                  1. construct object that replicates opponent's state
+                  2. implement type advantages/figure out how they work
+                  2.5 a pokemon has a type...
+                  3. first part of greedy: maximum amount of damage/use a thing
+                  4. second part of greedy: if in disadvantageous situation, switch
+            */
 		var move = moves[Math.floor(Math.random()*moves.length)];
 		this.send("/choose move " + move.move + "|" + rqid,this.id);
 	},
@@ -103,6 +137,12 @@ module.exports = new JS.Class({
 		this.send("/choose switch " + choice + "|" + rqid, this.id);
 	},
 	notifyRequest: function() {
+            /*for(key in this.request) {
+                logger.info("Key: " + key);
+                logger.info(this.request[key]);
+            }*/
+
+
 		switch (this.request.requestType) {
 			case 'move':
 				logger.info(this.title + ": I need to make a move.");

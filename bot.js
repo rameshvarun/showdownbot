@@ -89,8 +89,10 @@ function removeRoom(id) {
 
 // Code to execute once we have succesfully authenticated
 function onLogin() {
-	logger.info("Searching for an unranked random battle");
-	send("/search " + GAME_TYPE);
+    //do nothing
+
+    //logger.info("Searching for an unranked random battle");
+    //send("/search " + GAME_TYPE);
 }
 
 // Global recieve function - tries to interpret command, or send to the correct room
@@ -99,10 +101,11 @@ function recieve(data) {
 
 	var roomid = '';
 	if (data.substr(0,1) === '>') { // First determine if this command is for a room
-		var nlIndex = data.indexOf('\n');
+	    var nlIndex = data.indexOf('\n');
 		if (nlIndex < 0) return;
 		roomid = tools.toRoomid(data.substr(1,nlIndex-1));
 		data = data.substr(nlIndex+1);
+            logger.trace("<<<<<<< " + data);
 	}
 	if (data.substr(0,6) === '|init|') { // If it is an init command, create the room
 		if (!roomid) roomid = 'lobby';
