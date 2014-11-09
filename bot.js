@@ -30,6 +30,10 @@ var BattleRoom = require('./battleroom');
 // The game type that we want to search for on startup
 var GAME_TYPE = "unratedrandombattle";
 
+// Load in Game Data
+var Pokedex = require("./data/pokedex");
+var Typechart = require("./data/typechart");
+
 // Sends a piece of data to the given room
 // Room can be null for a global command
 function send(data, room) {
