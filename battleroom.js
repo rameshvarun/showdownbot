@@ -24,12 +24,14 @@ module.exports = new JS.Class({
 		this.send = sendfunc;
                 this.state = new Battle();
 
+                //for now, assume that we are p1
+
 		setTimeout(function() {
 			sendfunc(account.message, id);
 		}, 10000);
 
 		setTimeout(function() {
-			sendfunc("/timer", id)
+			sendfunc("/timer", id);
 		}, 10000)
 
 		//TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
@@ -78,10 +80,10 @@ module.exports = new JS.Class({
                                                  isNew = false;
                                              }
                                          });
-                            if(isNew) {
+                            /*if(isNew) {
                                 this.state.playerState.pokemon.push(new
                                                                     BattlePokemon(playerTokens[1],
-                            }
+                            }*/
                         }
                         //restore Pokemon state otherwise
                     } else if(tokens[1] === 'faint') {
