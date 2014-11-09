@@ -17,6 +17,7 @@ log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
 
 //battle-engine
 var Battle = require('./battle-engine/battle');
+var BattlePokemon = require('./battle-engine/battlepokemon');
 
 var Abilities = require("./data/abilities").BattleAbilities
 var Items = require("./data/items").BattleItems
@@ -124,12 +125,13 @@ module.exports = new JS.Class({
 			    this.send("/leave " + this.id);
 		        }
                         if (tokens[1] === 'switch') {
-                            logger.info("Hey! Switcheroo!");
+                            logger.info("Hey! Switcheroo! " + tokens[2]);
                             var tokens2 = tokens[2].split(' ');
-                            if(tokens2[0] === 'p2a') {
-                                this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1], this.state.p2));
+                            if(tokens2[0] === 'p2a:') {
+                                this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
+                                logger.info(this.oppPokemon);
                             }
-                        } else if(logLine.substr(0,6) === '|move|') {
+                        } else if(tokens[1] === 'move') {
 
                         }
                     }
@@ -204,10 +206,10 @@ module.exports = new JS.Class({
 					spd: 31,
 					spe: 31
 				},
-				item : Items[pokemon.item].name,
+				item : (pokemon.item === '') ? '' : Items[pokemon.item].name,
 				level : level,
 				shiny : false
-			}
+			};
 
 			// Initialize pokemon
 			this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
