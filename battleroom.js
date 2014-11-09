@@ -19,12 +19,9 @@ module.exports = new JS.Class({
                 this.opponentState = {};
 
 		setTimeout(function() {
-			sendfunc(account.message, id);
+			sendfunc(account.message, id); // Notify User that this is a bot
+			sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
 		}, 10000);
-
-		setTimeout(function() {
-			sendfunc("/timer", id)
-		}, 10000)
 
 		//TODO(rameshvarun): Start the timer after a couple minutes (to ensure that battles finish)
 	},
@@ -83,9 +80,22 @@ module.exports = new JS.Class({
 					logger.info(this.title + ": I lost this game");
 				}
 
+				this.saveResult();
 				this.send("/leave " + this.id);
 			}
 		}
+	},
+	saveResult: function() {
+		this.send("/savereplay", this.id); // Tell showdown to save a replay of this game
+		game = {
+			"title" : this.title,
+			"id" : this.id,
+			"win" : (this.winner == account.username),
+			"date" : new Date()
+		}
+		db.insert(game, function (err, newDoc) {
+			logger.info("Saved result of " + newDoc.title + " to database.");
+		});
 	},
 	receiveRequest: function(request) {
 		if (!request) {

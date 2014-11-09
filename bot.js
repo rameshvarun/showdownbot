@@ -103,9 +103,14 @@ function removeRoom(id) {
 function onLogin() {
     //do nothing
 
-    //logger.info("Searching for an unranked random battle");
-    //send("/search " + GAME_TYPE);
+
 }
+
+function searchBattle() {
+	logger.info("Searching for an unranked random battle");
+    send("/search " + GAME_TYPE);
+}
+module.exports.searchBattle = searchBattle;
 
 // Global recieve function - tries to interpret command, or send to the correct room
 function recieve(data) {
