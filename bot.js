@@ -11,6 +11,8 @@ var logger = require('log4js').getLogger(); // Setup Logging
 
 var account = require("./account.json"); // Login information for this bot
 
+var webconsole = require("./console.js");// Web console
+
 // Connect to server
 var sockjs = require('sockjs-client-ws');
 var client = sockjs.create(program.host);

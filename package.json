@@ -3,6 +3,7 @@
   "description": "AI bot for playing Pokemon Showdown.",
   "dependencies": {
     "commander": "2.x",
+    "express": "^4.10.0",
     "jsclass": "4.x",
     "log4js": "0.6.21",
     "nedb": "^0.11.1",
