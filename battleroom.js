@@ -134,8 +134,12 @@ module.exports = new JS.Class({
                             logger.info("Hey! Switcheroo! " + tokens[2]);
                             var tokens2 = tokens[2].split(' ');
                             if(tokens2[0] === 'p2a:') {
+                                var oldPokemon = this.oppPokemon;
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
-                                logger.info("Oppnent Switches To: " + this.oppPokemon.name);
+                                logger.info("Opponent Switches To: " + this.oppPokemon.name);
+                                if(oldPokemon === '' || !oldPokemon) { //then try to make a move
+                                    this.makeMove(this.request.rqid, this.request.active[0].moves);
+                                }
                             }
                         } else if(tokens[1] === 'move') {
 
@@ -241,9 +245,69 @@ module.exports = new JS.Class({
                   2.5 a pokemon has a type...
                   3. first part of greedy: maximum amount of damage/use a thing
                   4. second part of greedy: if in disadvantageous situation, switch
+
+                  TODO: algorithm doesn't take into account choice items which lock a pokemon in
             */
-		var move = moves[Math.floor(Math.random()*moves.length)];
-		this.send("/choose move " + move.move + "|" + rqid,this.id);
+            if(this.oppPokemon === '' || !this.oppPokemon) { //try again after some time
+                logger.info("Can't make a move until we determine opponent Pokemon!");
+                return;
+            }
+            var decision = {
+                prompt: "I need a move that is strong against " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
+                choices: [],
+                choice: "",
+                reason: ""
+            };
+            for(var i = 0; i < moves.length; ++i) {
+                logger.info(moves[i].id + ": " + moves[i].move);
+            }
+            var battleroom = this;
+            var choice = undefined;
+            //Find light screen or reflect
+
+            //Find entry hazard: stealth rock, spikes, toxic spikes, or sticky web
+
+            //Find status effect: thunder wave, toxic, willowisp, glare, etc.
+
+            //Find recovery move: soft-boiled, recover, synthesis, moonlight
+
+            //Find super effective move
+            choice = _.find(moves, function(move) {
+                var moveName = "";
+                var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                                                            battleroom.oppPokemon) > 0;
+                if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
+                return supereffective;
+            });
+            //Find normally effective move.
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                        var moveName = "";
+                        var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                                                                    battleroom.oppPokemon) === 0;
+                    if(supereffective) decision.reason = moveName + " is reasonably effective against the opponent.";
+                    return supereffective;
+                });
+            }
+            //Find less effective move.
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                        var moveName = "";
+                        var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                                                                    battleroom.oppPokemon) < 0;
+                    if(supereffective) decision.reason = moveName + " is not very effective against the opponent.";
+                    return supereffective;
+                });
+            }
+            //Choose random move.
+            if(!choice) {
+                choice = moves[Math.floor(Math.random()*moves.length)];
+                decision.reason = "Could not satisfy other constraints.";
+            }
+            decision.choice = choice;
+	    this.send("/choose move " + choice.move + "|" + rqid,this.id);
+            decisionslogger.info("Decision: " + JSON.stringify(decision));
+            this.decisions.push(decision);
 	},
 	makeSwitch: function(rqid, pokemon) {
 		var decision = {
