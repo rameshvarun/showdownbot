@@ -20,7 +20,7 @@ nunjucks.configure('templates', {
 });
 
 app.get('/', function(req, res){
-	db.find({}).sort({ date: 1}).exec(function(err, history) {
+	db.find({}).sort({ date: -1}).exec(function(err, history) {
 		res.render('home.html', {
 			"games" : _.values(bot.ROOMS),
 			"domain" : bot.DOMAIN,
