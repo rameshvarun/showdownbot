@@ -18,7 +18,7 @@ Title:
 <div class="panel {% if game.win %}panel-success{% else %}panel-danger{% endif %}">
 	<div class="panel-heading">{{game.title}} {% if game.win %}(Win){% else %}(Loss){% endif %}</div>
 	<div class="panel-body">
-		<a href="http://replay.pokemonshowdown.com/{{game.id}}" class="btn btn-primary" href="#" role="button">Watch Replay</a>
+		<a href="/replay?id={{game.id}}" class="btn btn-primary" href="#" role="button">Watch Replay</a>
 	</div>
 </div>
 {% endfor %}

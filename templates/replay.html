@@ -1,0 +1,98 @@
+
+<!DOCTYPE html>
+<html><head>
+
+	<meta charset="utf-8" />
+
+	<title>Unrated Random Battle replay: greedypercy vs. deathwing1234 - Pok&eacute;mon Showdown</title>
+
+	<meta name="description" content="Watch a replay of a Pokémon battle between greedypercy and deathwing1234 (Unrated Random Battle)" />
+
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=IE8" />
+	<link rel="stylesheet" href="//play.pokemonshowdown.com/style/font-awesome.css" />
+	<link rel="stylesheet" href="//pokemonshowdown.com/forum/theme/panels.css?" />
+	<link rel="stylesheet" href="//pokemonshowdown.com/theme/main.css" />
+	<link rel="stylesheet" href="//play.pokemonshowdown.com/style/battle.css" />
+	<link rel="stylesheet" href="//play.pokemonshowdown.com/style/replay.css?b10" />
+
+	<!-- Workarounds for IE bugs to display trees correctly. -->
+	<!--[if lte IE 6]><style> li.tree { height: 1px; } </style><![endif]-->
+	<!--[if IE 7]><style> li.tree { zoom: 1; } </style><![endif]-->
+</head><body>
+
+
+
+	<div class="pfx-panel"><div class="pfx-body" style="max-width:1180px">
+				<h1 style="font-weight:normal;text-align:left"><strong>Unrated Random Battle</strong>: {{game.title}}</h1>
+			<p style="padding:0 1em;margin-top:0">
+				<small><em>Uploaded:</em> {{game.date}}</small>
+			</p>
+		<div class="wrapper replay-wrapper">
+
+			<div class="battle"><div class="playbutton"><button data-action="start">Play</button></div></div>
+			<div class="battle-log"></div>
+			<div class="replay-controls">
+				<button data-action="start"><i class="icon-play"></i> Start</button>
+			</div>
+			<div class="replay-controls-2">
+				<div class="chooser leftchooser speedchooser">
+					<em>Speed:</em>
+					<div><button class="sel" value="fast">Fast</button><button value="normal">Normal</button><button value="slow">Slow</button><button value="reallyslow">Really Slow</button></div>
+				</div>
+				<div class="chooser colorchooser">
+					<em>Color&nbsp;scheme:</em>
+					<div><button class="sel" value="light">Light</button><button value="dark">Dark</button></div>
+				</div>
+				<div class="chooser soundchooser" style="display:none">
+					<em>Music:</em>
+					<div><button class="sel" value="on">On</button><button value="off">Off</button></div>
+				</div>
+			</div>
+			<!--[if lte IE 8]>
+				<div class="error"><p>&#3232;_&#3232; <strong>You're using an old version of Internet Explorer.</strong></p>
+				<p>We use some transparent backgrounds, rounded corners, and other effects that your old version of IE doesn't support.</p>
+				<p>Please install <em>one</em> of these: <a href="http://www.google.com/chrome">Chrome</a> | <a href="http://www.mozilla.org/en-US/firefox/">Firefox</a> | <a href="http://windows.microsoft.com/en-US/internet-explorer/products/ie/home">Internet Explorer 9</a></p></div>
+			<![endif]-->
+
+
+
+
+			<!--p class="linkbar">[<a href="./">Other replays</a>] [<a href="http://www.smogon.com/forums/showthread.php?t=3453192">Report bugs to the Smogon thread</a>]</p-->
+			<div id="loopcount"></div>
+		</div>
+
+		<input type="hidden" name="replayid" value="unratedrandombattle-182695726" />
+		<script type="text/plain" class="log">{{game.log}}</script>
+
+		<h1>Decision Log:</h1>
+		{% for d in game.decisions %}
+		Prompt: {{d.prompt}}<br>
+		Choices: {{stringify(d.choices)}}<br>
+		Result: {{d.choice}}<br>
+		Reason: {{d.reason}}
+		<br><br>
+		{% endfor %}
+
+	</div></div>
+
+	
+
+	<script src="//play.pokemonshowdown.com/js/lib/jquery-1.11.0.min.js"></script>
+	<script src="//play.pokemonshowdown.com/js/lib/lodash.compat.js"></script>
+	<script src="//play.pokemonshowdown.com/js/lib/backbone.js"></script>
+	<script src="//pokemonshowdown.com/forum/js/panels.js"></script>
+
+	<script src="//play.pokemonshowdown.com/js/lib/jquery-cookie.js"></script>
+	<script src="//play.pokemonshowdown.com/js/lib/html-sanitizer-minified.js"></script>
+	<script src="//play.pokemonshowdown.com/js/lib/soundmanager2-nodebug-jsmin.js?"></script>
+	<script>
+		soundManager.setup({url: '//play.pokemonshowdown.com/swf/'});
+	</script>
+	<script src="//play.pokemonshowdown.com/js/config.js?v0.9"></script>
+	<script src="//play.pokemonshowdown.com/js/battledata.js?v0.9.5h"></script>
+	<script src="//play.pokemonshowdown.com/data/pokedex-mini.js?v0.9.5h"></script>
+	<script src="//play.pokemonshowdown.com/data/graphics.js?v0.9.4"></script>
+	<script src="//play.pokemonshowdown.com/js/battle.js?v0.9.4a"></script>
+	<script src="//replay.pokemonshowdown.com/js/replay.js?b21"></script>
+
+</body></html>

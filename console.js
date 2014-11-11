@@ -29,6 +29,17 @@ app.get('/', function(req, res){
 	});
 });
 
+app.get('/replay', function(req, res){
+	db.findOne({ id: req.query.id }).exec(function(err, game) {
+		game.decisions = JSON.parse(game.decisions);
+		res.render('replay.html', {
+			game : game,
+			stringify : JSON.stringify
+		});
+	});
+});
+
+
 app.get('/search', function(req, res){
 	logger.debug("Asked to query from web console.");
 	bot.searchBattle();

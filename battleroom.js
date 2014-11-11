@@ -159,10 +159,7 @@ module.exports = new JS.Class({
 		}
 	},
 	saveResult: function() {
-        // Tell showdown to save a replay of this game (after a second)
-        var battleroom = this;
-        setTimeout(function() { this.send("/savereplay", battleroom.id);  }, 1000);
-
+        // Save game data to data base
 		game = {
 			"title" : this.title,
 			"id" : this.id,
