@@ -121,7 +121,7 @@ module.exports = new JS.Class({
                     var tokens = log[i].split('|');
                     if(tokens.length > 1) {
 		        if (tokens[1] === 'win') {
-			    this.send("Good game!", this.id);
+			    this.send("gg", this.id);
 
 			    this.winner = tokens[2];
 			    if(this.winner == account.username) {
@@ -131,7 +131,12 @@ module.exports = new JS.Class({
 			    }
 
 			    this.saveResult();
-			    this.send("/leave " + this.id);
+
+                var battleroom = this;
+                setTimeout(function() {
+                    battleroom.send("/leave " + this.id);
+                }, 5000);
+			    
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                             logger.info("Oppnents pokemon has switched! " + tokens[2]);
