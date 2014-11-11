@@ -136,7 +136,7 @@ module.exports = new JS.Class({
                 setTimeout(function() {
                     battleroom.send("/leave " + this.id);
                 }, 5000);
-			    
+
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                             logger.info("Oppnents pokemon has switched! " + tokens[2]);
@@ -146,7 +146,8 @@ module.exports = new JS.Class({
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
                                 logger.info("Opponent Switches To: " + this.oppPokemon.name);
                                 //if(oldPokemon === '' || !oldPokemon) { //then try to make a move
-                                this.makeMove(this.request.rqid, this.request.active[0].moves);
+                                if(this.request.active)
+                                    this.makeMove(this.request.rqid, this.request.active[0].moves);
                                 //}
                             }
                         } else if(tokens[1] === 'move') {
@@ -321,7 +322,7 @@ module.exports = new JS.Class({
                             moveData.id === "grassknot" || moveData.id === "lowkick")
                         && battleroom.activePokemon.getTypes().indexOf(moveData.type) >= 0
                         && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
-                    if(supereffective) decision.reason = move.move + " is" + " supereffective against the opponent and has STAB.";
+                    if(supereffective) decision.reason = move.move + " is supereffective against the opponent and has STAB.";
                     return supereffective;
                 });
             }
