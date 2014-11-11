@@ -132,10 +132,9 @@ module.exports = new JS.Class({
 
 			    this.saveResult();
 
+                // Leave in five seconds
                 var battleroom = this;
-                setTimeout(function() {
-                    battleroom.send("/leave " + this.id);
-                }, 5000);
+                setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 20000);
 			    
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
@@ -156,7 +155,10 @@ module.exports = new JS.Class({
 		}
 	},
 	saveResult: function() {
-		this.send("/savereplay", this.id); // Tell showdown to save a replay of this game
+        // Tell showdown to save a replay of this game
+        var battleroom = this;
+        setTimeout(function() { battleroom.send("/savereplay", battleroom.id);  }, 10000);
+
 		game = {
 			"title" : this.title,
 			"id" : this.id,
