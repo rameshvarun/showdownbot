@@ -132,11 +132,9 @@ module.exports = new JS.Class({
 
 			    this.saveResult();
 
-                var battleroom = this;
-                setTimeout(function() {
-                    battleroom.send("/leave " + this.id);
-                }, 5000);
-
+                            // Leave in five seconds
+                            var battleroom = this;
+                            setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 20000);
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                             logger.info("Oppnents pokemon has switched! " + tokens[2]);
@@ -157,7 +155,10 @@ module.exports = new JS.Class({
 		}
 	},
 	saveResult: function() {
-		this.send("/savereplay", this.id); // Tell showdown to save a replay of this game
+        // Tell showdown to save a replay of this game
+        var battleroom = this;
+        setTimeout(function() { battleroom.send("/savereplay", battleroom.id);  }, 10000);
+
 		game = {
 			"title" : this.title,
 			"id" : this.id,
@@ -442,7 +443,7 @@ module.exports = new JS.Class({
 				var supereffective = _.any(pokemon.getMoves(), function(move) {
 					moveName = move.move;
 					var moveData = Tools.getMove(move.id);
-					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0 && moveData.basePower > 0;
+					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0 && moveData.basePower > 0 && Tools.getImmunity(moveData.type, battleroom.oppPokemon);
 				});
 				if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
 				return supereffective;
