@@ -258,8 +258,8 @@ module.exports = new JS.Class({
                 return;
             }
             var decision = {
-                prompt: "I need a move that is strong against " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
-                choices: [],
+                prompt: "I need a move that is either strong against " + this.oppPokemon.name + " (" + JSON.stringify(this.oppPokemon.getTypes()) + ") or is fitting for the situation.",
+                choices: moves,
                 choice: "",
                 reason: ""
             };
@@ -304,7 +304,7 @@ module.exports = new JS.Class({
 
             //Find recovery move: soft-boiled, recover, synthesis, moonlight, if our hp is low enough
             //...determining of hp is low enough might be challenging
-            logger.info(battleroom.activePokemon.getTypes(), Tools.getMove(moves[0].id).type);
+
             //Find super effective move
             if(!choice) {
                 choice = _.find(moves, function(move) {
