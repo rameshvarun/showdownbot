@@ -47,6 +47,7 @@ module.exports = new JS.Class({
 	    }, 10000);
 
 	    this.decisions = [];
+        this.log = "";
 	},
 	init: function(data) {
 		var log = data.split('\n');
@@ -118,6 +119,8 @@ module.exports = new JS.Class({
 
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
+            this.log += log[i] + "\n";
+
                     var tokens = log[i].split('|');
                     if(tokens.length > 1) {
 		        if (tokens[1] === 'win') {
@@ -132,9 +135,9 @@ module.exports = new JS.Class({
 
 			    this.saveResult();
 
-                // Leave in five seconds
+                // Leave in two seconds
                 var battleroom = this;
-                setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 20000);
+                setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 2000);
 			    
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
@@ -155,15 +158,17 @@ module.exports = new JS.Class({
 		}
 	},
 	saveResult: function() {
-        // Tell showdown to save a replay of this game
+        // Tell showdown to save a replay of this game (after a second)
         var battleroom = this;
-        setTimeout(function() { battleroom.send("/savereplay", battleroom.id);  }, 10000);
+        setTimeout(function() { this.send("/savereplay", battleroom.id);  }, 1000);
 
 		game = {
 			"title" : this.title,
 			"id" : this.id,
 			"win" : (this.winner == account.username),
-			"date" : new Date()
+			"date" : new Date(),
+            "decisions" : JSON.stringify(this.decisions),
+            "log" : this.log
 		}
 		db.insert(game, function (err, newDoc) {
 			logger.info("Saved result of " + newDoc.title + " to database.");

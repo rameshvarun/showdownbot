@@ -6,6 +6,10 @@ program
 
 var request = require('request'); // Used for making post requests to login server
 var util = require('./util');
+var fs = require('fs');
+
+// Ensure that logging directory exists
+if(!fs.existsSync("./logs")) { fs.mkdirSync("logs") };
 
 // Setup Logging
 var log4js = require('log4js');
