@@ -362,7 +362,10 @@ module.exports = new JS.Class({
                 decision.reason = "Could not satisfy other constraints.";
             }
             decision.choice = choice;
-	    this.send("/choose move " + choice.move + "|" + rqid,this.id);
+            if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
+	        this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
+            else
+                this.send("/choose move " + choice.move + "|" + rqid,this.id);
             decisionslogger.info("Decision: " + JSON.stringify(decision));
             this.decisions.push(decision);
 	},
