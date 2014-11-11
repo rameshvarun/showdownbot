@@ -313,7 +313,8 @@ module.exports = new JS.Class({
                     var supereffective = Tools.getEffectiveness(moveData,
                                                                 battleroom.oppPokemon) > 0
                         && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick");
+                            moveData.id === "grassknot" || moveData.id === "lowkick")
+                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
                     if(supereffective) decision.reason = move.move + " is supereffective against the opponent.";
                     return supereffective;
                 });
