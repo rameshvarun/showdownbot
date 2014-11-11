@@ -2,7 +2,7 @@
 JS = require('jsclass');
 JS.require('JS.Class');
 
-require("sugar")
+require("sugar");
 
 // Account file
 var account = require("./account.json");
@@ -21,10 +21,10 @@ log4js.addAppender(log4js.appenders.file('logs/decisions.log'), 'decisions');
 var Battle = require('./battle-engine/battle');
 var BattlePokemon = require('./battle-engine/battlepokemon');
 
-var Abilities = require("./data/abilities").BattleAbilities
-var Items = require("./data/items").BattleItems
+var Abilities = require("./data/abilities").BattleAbilities;
+var Items = require("./data/items").BattleItems;
 
-var _ = require("underscore")
+var _ = require("underscore");
 
 module.exports = new JS.Class({
 	initialize: function(id, sendfunc) {
@@ -33,7 +33,7 @@ module.exports = new JS.Class({
 	    this.send = sendfunc;
             this.oppPokemon = '';
 
-	    //for now, assume that we are p1
+	    //TODO: we assume that we are p1, but this is not always the case
             this.state = Battle.construct(id, 'base', false);
             this.state.join('p1','botPlayer');
             this.state.join('p2','humanPlayer');
@@ -133,7 +133,7 @@ module.exports = new JS.Class({
                         if (tokens[1] === 'switch') {
                             logger.info("Hey! Switcheroo! " + tokens[2]);
                             var tokens2 = tokens[2].split(' ');
-                            if(tokens2[0] === 'p2a:') {
+                            if(tokens2[0] === 'p2a:') { //TODO: opponent might not be p2a
                                 var oldPokemon = this.oppPokemon;
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
                                 logger.info("Opponent Switches To: " + this.oppPokemon.name);
@@ -263,39 +263,66 @@ module.exports = new JS.Class({
             }
             var battleroom = this;
             var choice = undefined;
-            //Find light screen or reflect
-
+            //Find light screen reflect, or tailwind, and make sure they aren't already up
+            choice = _.find(moves, function(move) {
+                //TODO: we might not necessarily be p1
+                //TODO: the pokemon might fail at using the move -- have to apply other checks
+                if(((move.id === "reflect" || move.id === "lightscreen" ||
+                     move.id === "tailwind") &&
+                    !battleroom.state.p1.getSideCondition(move))) {
+                    decision.reason = move.move + " protects our side of the field.";
+                    //assume that we successfully bring up the move
+                    battleroom.state.p1.addSideCondition(move, battleroom.state.p1);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
             //Find entry hazard: stealth rock, spikes, toxic spikes, or sticky web
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                    //TODO: we might not necessarily be p2
+                    //TODO: the pokemon might fail at using the move -- have to apply other checks
+                    if(((move.id === "stealthrock" || move.id === "spikes" ||
+                         move.id === "toxicspikes" || move.id === "stickyweb")
+                        && !battleroom.state.p2.getSideCondition(move))) {
+                        decision.reason = move.move + " is an entry hazard.";
+                        battleroom.state.p2.addSideCondition(move, battleroom.state.p1);
+                        return true;
+                    } else {
+                        return false;
+                    }
+                });
+            }
+            //Find status effect: thunder wave, toxic, willowisp, glare, nuzzle
+            //must perform check for what status the opponent has
 
-            //Find status effect: thunder wave, toxic, willowisp, glare, etc.
-
-            //Find recovery move: soft-boiled, recover, synthesis, moonlight
+            //Find recovery move: soft-boiled, recover, synthesis, moonlight, if our hp is low enough
 
             //Find super effective move
-            choice = _.find(moves, function(move) {
-                var moveName = "";
-                var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
-                                                            battleroom.oppPokemon) > 0;
-                if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
-                return supereffective;
-            });
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                                                                battleroom.oppPokemon) > 0;
+                    if(supereffective) decision.reason = move.move + " is supereffective against the opponent.";
+                    return supereffective;
+                });
+            }
             //Find normally effective move.
             if(!choice) {
                 choice = _.find(moves, function(move) {
-                        var moveName = "";
-                        var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
                                                                     battleroom.oppPokemon) === 0;
-                    if(supereffective) decision.reason = moveName + " is reasonably effective against the opponent.";
+                    if(supereffective) decision.reason = move.move + " is reasonably effective against the opponent.";
                     return supereffective;
                 });
             }
             //Find less effective move.
             if(!choice) {
                 choice = _.find(moves, function(move) {
-                        var moveName = "";
-                        var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
+                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
                                                                     battleroom.oppPokemon) < 0;
-                    if(supereffective) decision.reason = moveName + " is not very effective against the opponent.";
+                    if(supereffective) decision.reason = move.move + " is not very effective against the opponent.";
                     return supereffective;
                 });
             }

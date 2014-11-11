@@ -19,7 +19,7 @@ var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
 log4js.addAppender(log4js.appenders.file('logs/battle.log'), 'battle');
 
-BattleSide = require('./battleside')
+BattleSide = require('./battleside');
 
 // Battle Class
 Battle = (function () {
@@ -1466,7 +1466,7 @@ Battle = (function () {
 			critMult = [0, 16, 8, 2, 1];
 		}
 
-		move.crit = move.willCrit || false;
+		move.crit = false; //always make crit false
 		if (move.willCrit === undefined) {
 			if (move.critRatio) {
 				move.crit = (this.random(critMult[move.critRatio]) === 0);
