@@ -306,6 +306,20 @@ module.exports = new JS.Class({
             //Find recovery move: soft-boiled, recover, synthesis, moonlight, if our hp is low enough
             //...determining of hp is low enough might be challenging
 
+            //Find super effective move with STAB
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                    var moveData = Tools.getMove(move.id);
+                    var supereffective = Tools.getEffectiveness(moveData,
+                                                                battleroom.oppPokemon) > 0
+                        && (moveData.basePower > 0 || moveData.id === "return" ||
+                            moveData.id === "grassknot" || moveData.id === "lowkick")
+                        && battleroom.activePokemon.getTypes().indexOf(moveData.type) >= 0
+                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
+                    if(supereffective) decision.reason = move.move + " is" + " supereffective against the opponent and has STAB.";
+                    return supereffective;
+                });
+            }
             //Find super effective move
             if(!choice) {
                 choice = _.find(moves, function(move) {
@@ -426,6 +440,18 @@ module.exports = new JS.Class({
 				});
 				if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
 				return supereffective;
+			});
+		}
+
+                //Choose pokemon that receives neutral damage from opponent
+		if(!choice) {
+			choice = _.find(choices, function(i) {
+				var pokemon = battleroom.state.p1.pokemon[i];
+				var receiveNeutral = _.all(battleroom.oppPokemon.getTypes(), function(type) {
+					return Tools.getEffectiveness(type, pokemon) <= 0;
+				});
+				if(receiveNeutral) decision.reason = "We do not take super effective damage from both of the types.";
+				return receiveNeutral;
 			});
 		}
 
