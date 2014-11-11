@@ -2,6 +2,8 @@
 JS = require('jsclass');
 JS.require('JS.Class');
 
+//does this work? will it show up?
+
 require("sugar");
 
 // Account file
@@ -32,6 +34,7 @@ module.exports = new JS.Class({
 	    this.title = "Untitled";
 	    this.send = sendfunc;
             this.oppPokemon = '';
+            this.activePokemon = '';
 
 	    //TODO: we assume that we are p1, but this is not always the case
             this.state = Battle.construct(id, 'base', false);
@@ -76,7 +79,7 @@ module.exports = new JS.Class({
                 if(tokens.length > 1) {
                     if(tokens[1] === 'move') {
                         logger.trace("a move!");
-                    } else if(tokens[1]  === 'switch') {
+                    } else if(tokens[1]  === 'switch' || tokens[1] === 'drag') {
                         //check if new Pokemon
                         logger.trace('a switch!');
                         var playerTokens = tokens[2].split(' ');
@@ -130,16 +133,16 @@ module.exports = new JS.Class({
 			    this.saveResult();
 			    this.send("/leave " + this.id);
 		        }
-                        if (tokens[1] === 'switch') {
+                        if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                             logger.info("Hey! Switcheroo! " + tokens[2]);
                             var tokens2 = tokens[2].split(' ');
                             if(tokens2[0] === 'p2a:') { //TODO: opponent might not be p2a
                                 var oldPokemon = this.oppPokemon;
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
                                 logger.info("Opponent Switches To: " + this.oppPokemon.name);
-                                if(oldPokemon === '' || !oldPokemon) { //then try to make a move
-                                    this.makeMove(this.request.rqid, this.request.active[0].moves);
-                                }
+                                //if(oldPokemon === '' || !oldPokemon) { //then try to make a move
+                                this.makeMove(this.request.rqid, this.request.active[0].moves);
+                                //}
                             }
                         } else if(tokens[1] === 'move') {
 
@@ -218,6 +221,7 @@ module.exports = new JS.Class({
 				},
 				item : (pokemon.item === '') ? '' : Items[pokemon.item].name,
 				level : level,
+                                active : pokemon.active,
 				shiny : false
 			};
 
@@ -228,6 +232,7 @@ module.exports = new JS.Class({
 			for(var stat in pokemon.stats) {
 				this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
 			}
+                        if(template.active) this.activePokemon = this.state.p1.pokemon[i];
 
 			// TODO(rameshvarun): Somehow parse / load in current hp and status conditions
 		}
@@ -295,24 +300,46 @@ module.exports = new JS.Class({
                 });
             }
             //Find status effect: thunder wave, toxic, willowisp, glare, nuzzle
-            //must perform check for what status the opponent has
+            //must perform check for what status the opponent has...
 
             //Find recovery move: soft-boiled, recover, synthesis, moonlight, if our hp is low enough
-
+            //...determining of hp is low enough might be challenging
+            logger.info(battleroom.activePokemon.getTypes(), Tools.getMove(moves[0].id).type);
             //Find super effective move
             if(!choice) {
                 choice = _.find(moves, function(move) {
-                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
-                                                                battleroom.oppPokemon) > 0;
+                    var moveData = Tools.getMove(move.id);
+                    var supereffective = Tools.getEffectiveness(moveData,
+                                                                battleroom.oppPokemon) > 0
+                        && (moveData.basePower > 0 || moveData.id === "return" ||
+                            moveData.id === "grassknot" || moveData.id === "lowkick");
                     if(supereffective) decision.reason = move.move + " is supereffective against the opponent.";
                     return supereffective;
+                });
+            }
+            //Find move with STAB
+            if(!choice) {
+                choice = _.find(moves, function(move) {
+                    var moveData = Tools.getMove(move.id);
+                    var goodMove = Tools.getEffectiveness(moveData,
+                                                          battleroom.oppPokemon) === 0
+                        && (moveData.basePower > 0 || moveData.id === "return" ||
+                            moveData.id === "grassknot" || moveData.id === "lowkick")
+                        && battleroom.activePokemon.getTypes().indexOf(moveData.type) >= 0
+                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
+                    if(goodMove) decision.reason = move.move + " has the same type attack bonus (STAB).";
+                    return goodMove;
                 });
             }
             //Find normally effective move.
             if(!choice) {
                 choice = _.find(moves, function(move) {
-                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
-                                                                    battleroom.oppPokemon) === 0;
+                    var moveData = Tools.getMove(move.id);
+                    var supereffective = Tools.getEffectiveness(moveData,
+                                                                battleroom.oppPokemon) === 0
+                        && (moveData.basePower > 0 || moveData.id === "return" ||
+                            moveData.id === "grassknot" || moveData.id === "lowkick")
+                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
                     if(supereffective) decision.reason = move.move + " is reasonably effective against the opponent.";
                     return supereffective;
                 });
@@ -320,8 +347,11 @@ module.exports = new JS.Class({
             //Find less effective move.
             if(!choice) {
                 choice = _.find(moves, function(move) {
-                    var supereffective = Tools.getEffectiveness(Tools.getMove(move.id),
-                                                                    battleroom.oppPokemon) < 0;
+                    var moveData = Tools.getMove(move.id);
+                    var supereffective = Tools.getEffectiveness(moveData,
+                                                                battleroom.oppPokemon) < 0
+                        && (moveData.basePower > 0 || moveData.id === "return" ||
+                            moveData.id === "grassknot" || moveData.id === "lowkick");
                     if(supereffective) decision.reason = move.move + " is not very effective against the opponent.";
                     return supereffective;
                 });
@@ -387,7 +417,7 @@ module.exports = new JS.Class({
 				var supereffective = _.any(pokemon.getMoves(), function(move) {
 					moveName = move.move;
 					var moveData = Tools.getMove(move.id);
-					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0;
+					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0 && moveData.basePower > 0;
 				});
 				if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
 				return supereffective;
@@ -411,8 +441,6 @@ module.exports = new JS.Class({
                 logger.info("Key: " + key);
                 logger.info(this.request[key]);
             }*/
-
-
 		switch (this.request.requestType) {
 			case 'move':
 				logger.info(this.title + ": I need to make a move.");
