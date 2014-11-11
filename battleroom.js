@@ -134,9 +134,9 @@ module.exports = new JS.Class({
 			    this.send("/leave " + this.id);
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
-                            logger.info("Hey! Switcheroo! " + tokens[2]);
+                            logger.info("Oppnents pokemon has switched! " + tokens[2]);
                             var tokens2 = tokens[2].split(' ');
-                            if(tokens2[0] === 'p2a:') { //TODO: opponent might not be p2a
+                            if(tokens2[0] === this.oppSide + 'a:') { //TODO: opponent might not be p2a
                                 var oldPokemon = this.oppPokemon;
                                 this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
                                 logger.info("Opponent Switches To: " + this.oppPokemon.name);
@@ -238,6 +238,7 @@ module.exports = new JS.Class({
 		}
 
 		this.side = sideData.id;
+        this.oppSide = (this.side === "p1") ? "p2" : "p1";
 		logger.info(this.title + ": My current side is " + this.side);
 	},
 	makeMove: function(rqid, moves) {
