@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var nunjucks = require('nunjucks');
 var bot = require('./bot')
+var program = require('commander');
 
 // Results database
 var db = require("./db");
@@ -46,7 +47,8 @@ app.get('/search', function(req, res){
 	res.redirect("/");
 });
 
-app.listen(3000);
-logger.info("Started web console.");
+var port = parseInt(program.port);
+app.listen(port);
+logger.info("Started web console on port " + port + "...");
 
 module.exports = app;
