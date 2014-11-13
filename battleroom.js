@@ -123,6 +123,11 @@ module.exports = new JS.Class({
 
                     var tokens = log[i].split('|');
                     if(tokens.length > 1) {
+
+                        if(tokens[1] === 'tier') {
+                            this.tier = tokens[2];
+                        }
+
 		        if (tokens[1] === 'win') {
 			    this.send("gg", this.id);
 
@@ -166,7 +171,8 @@ module.exports = new JS.Class({
 			"win" : (this.winner == account.username),
 			"date" : new Date(),
             "decisions" : JSON.stringify(this.decisions),
-            "log" : this.log
+            "log" : this.log,
+            "tier" : this.tier
 		}
 		db.insert(game, function (err, newDoc) {
 			logger.info("Saved result of " + newDoc.title + " to database.");
@@ -277,7 +283,7 @@ module.exports = new JS.Class({
 
             // Determine if we can switch pokemon
             var canswitch = false;
-            if(this.request.active[0].trapped) { canswitch = false; } // Trapped
+            if(this.request.active[0].trapped || this.request.active[0].maybeTrapped) { canswitch = false; } // Trapped
             else {
                 canswitch = _.any(this.request.side.pokemon, function(pokemon) {
                     return pokemon.condition.indexOf("fnt") < 0 && !pokemon.active;
