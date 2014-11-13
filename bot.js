@@ -1,11 +1,18 @@
 // Command-line Arguments
 var program = require('commander');
 program
+	.option('--console', 'Only start the web console - not the game playing bot.')
 	.option('--host [url]', 'The websocket endpoint of the host to try to connect to. ["http://sim.smogon.com:8000/showdown"]', 'http://sim.smogon.com:8000/showdown')
+	.option('--port [port]', 'The port on which to serve the web console. [3000]', "3000")
+	.option('--ranked', 'Challenge on the ranked league.')
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server
 var util = require('./util');
+var fs = require('fs');
+
+// Ensure that logging directory exists
+if(!fs.existsSync("./logs")) { fs.mkdirSync("logs") };
 
 // Setup Logging
 var log4js = require('log4js');
@@ -19,7 +26,9 @@ var webconsole = require("./console.js");// Web console
 
 // Connect to server
 var sockjs = require('sockjs-client-ws');
-var client = sockjs.create(program.host);
+var client = null;
+if(!program.console)
+	client = sockjs.create(program.host);
 
 // Domain (replay button redirects here)
 var DOMAIN = "http://play.pokemonshowdown.com/";
@@ -36,7 +45,7 @@ var CHALLENGE = null;
 var BattleRoom = require('./battleroom');
 
 // The game type that we want to search for on startup
-var GAME_TYPE = "unratedrandombattle";
+var GAME_TYPE = (program.ranked) ? "randombattle" : "unratedrandombattle";
 
 // Load in Game Data
 var Pokedex = require("./data/pokedex");
@@ -223,14 +232,16 @@ function recieve(data) {
 	}
 }
 
-client.on('connection', function() {
-	logger.info('Connected to server.');
-});
+if(client) {
+	client.on('connection', function() {
+		logger.info('Connected to server.');
+	});
 
-client.on('data', function(msg) {
-	recieve(msg);
-});
+	client.on('data', function(msg) {
+		recieve(msg);
+	});
 
-client.on('error', function(e) {
-	logger.error(e);
-});
+	client.on('error', function(e) {
+		logger.error(e);
+	});
+}

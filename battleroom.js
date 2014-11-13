@@ -47,6 +47,7 @@ module.exports = new JS.Class({
 	    }, 10000);
 
 	    this.decisions = [];
+        this.log = "";
 	},
 	init: function(data) {
 		var log = data.split('\n');
@@ -118,8 +119,15 @@ module.exports = new JS.Class({
 
 		var log = data.split('\n');
 		for (var i = 0; i < log.length; i++) {
+            this.log += log[i] + "\n";
+
                     var tokens = log[i].split('|');
                     if(tokens.length > 1) {
+
+                        if(tokens[1] === 'tier') {
+                            this.tier = tokens[2];
+                        }
+
 		        if (tokens[1] === 'win') {
 			    this.send("gg", this.id);
 
@@ -132,9 +140,10 @@ module.exports = new JS.Class({
 
 			    this.saveResult();
 
-                            // Leave in five seconds
-                            var battleroom = this;
-                            setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 20000);
+                // Leave in two seconds
+                var battleroom = this;
+                setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 2000);
+
 		        }
                         if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                             logger.info("Oppnents pokemon has switched! " + tokens[2]);
@@ -155,15 +164,15 @@ module.exports = new JS.Class({
 		}
 	},
 	saveResult: function() {
-        // Tell showdown to save a replay of this game
-        var battleroom = this;
-        setTimeout(function() { battleroom.send("/savereplay", battleroom.id);  }, 10000);
-
+        // Save game data to data base
 		game = {
 			"title" : this.title,
 			"id" : this.id,
 			"win" : (this.winner == account.username),
-			"date" : new Date()
+			"date" : new Date(),
+            "decisions" : JSON.stringify(this.decisions),
+            "log" : this.log,
+            "tier" : this.tier
 		}
 		db.insert(game, function (err, newDoc) {
 			logger.info("Saved result of " + newDoc.title + " to database.");
@@ -271,6 +280,16 @@ module.exports = new JS.Class({
                 choice: "",
                 reason: ""
             };
+
+            // Determine if we can switch pokemon
+            var canswitch = false;
+            if(this.request.active[0].trapped || this.request.active[0].maybeTrapped) { canswitch = false; } // Trapped
+            else {
+                canswitch = _.any(this.request.side.pokemon, function(pokemon) {
+                    return pokemon.condition.indexOf("fnt") < 0 && !pokemon.active;
+                });
+            }
+
             for(var i = 0; i < moves.length; ++i) {
                 logger.info(moves[i].id + ": " + moves[i].move);
             }
@@ -340,6 +359,18 @@ module.exports = new JS.Class({
                     return supereffective;
                 });
             }
+
+            // Potentially switch out
+            if(!choice && canswitch) {
+                var shouldSwitch = _.any(this.oppPokemon.getTypes(), function(oppType) {
+                    return Tools.getEffectiveness(oppType, battleroom.activePokemon.getTypes()) > 0 && Tools.getImmunity(oppType, battleroom.oppPokemon.getTypes());
+                }) && this.makeSwitch(this.request.rqid, this.request.side.pokemon, true);
+                if(shouldSwitch) {
+                    choice = "switch";
+                    decision.reason = this.oppPokemon.name + " is super effective against " + this.activePokemon.name;
+                }
+            }
+
             //Find move with STAB
             if(!choice) {
                 choice = _.find(moves, function(move) {
@@ -384,15 +415,23 @@ module.exports = new JS.Class({
                 choice = moves[Math.floor(Math.random()*moves.length)];
                 decision.reason = "Could not satisfy other constraints.";
             }
+
+            // Push result to decision log
             decision.choice = choice;
-            if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
-	        this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
-            else
-                this.send("/choose move " + choice.move + "|" + rqid,this.id);
             decisionslogger.info("Decision: " + JSON.stringify(decision));
             this.decisions.push(decision);
+
+            if(choice != "switch") {
+                if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
+    	           this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
+                else
+                    this.send("/choose move " + choice.move + "|" + rqid,this.id);
+            } else {
+                this.makeSwitch(this.request.rqid, this.request.side.pokemon);
+            }
+
 	},
-	makeSwitch: function(rqid, pokemon) {
+	makeSwitch: function(rqid, pokemon, isbetter) {
 		var decision = {
 			prompt: "I need to switch to a pokemon that opposes " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
 			choices: [],
@@ -450,7 +489,7 @@ module.exports = new JS.Class({
 			});
 		}
 
-                //Choose pokemon that receives neutral damage from opponent
+        //Choose pokemon that receives neutral damage from opponent
 		if(!choice) {
 			choice = _.find(choices, function(i) {
 				var pokemon = battleroom.state.p1.pokemon[i];
@@ -461,6 +500,9 @@ module.exports = new JS.Class({
 				return receiveNeutral;
 			});
 		}
+
+        // In this special case, dont actually execute a move - just check if there is a better pokemon
+        if(isbetter) return (choice != null);
 
 		// If none of the Pokemon satisfy any of the above properties, choose the next Pokemon from the possible Pokemon that can be chosen.
 		if(!choice) {
