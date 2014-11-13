@@ -358,7 +358,7 @@ module.exports = new JS.Class({
             if(!choice && canswitch) {
                 var shouldSwitch = _.any(this.oppPokemon.getTypes(), function(oppType) {
                     return Tools.getEffectiveness(oppType, battleroom.activePokemon.getTypes()) > 0 && Tools.getImmunity(oppType, battleroom.oppPokemon.getTypes());
-                });
+                }) && this.makeSwitch(this.request.rqid, this.request.side.pokemon, true);
                 if(shouldSwitch) {
                     choice = "switch";
                     decision.reason = this.oppPokemon.name + " is super effective against " + this.activePokemon.name;
@@ -425,7 +425,7 @@ module.exports = new JS.Class({
             }
 
 	},
-	makeSwitch: function(rqid, pokemon) {
+	makeSwitch: function(rqid, pokemon, isbetter) {
 		var decision = {
 			prompt: "I need to switch to a pokemon that opposes " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
 			choices: [],
@@ -494,6 +494,9 @@ module.exports = new JS.Class({
 				return receiveNeutral;
 			});
 		}
+
+        // In this special case, dont actually execute a move - just check if there is a better pokemon
+        if(isbetter) return (choice != null);
 
 		// If none of the Pokemon satisfy any of the above properties, choose the next Pokemon from the possible Pokemon that can be chosen.
 		if(!choice) {
