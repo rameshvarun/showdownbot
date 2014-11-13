@@ -274,6 +274,16 @@ module.exports = new JS.Class({
                 choice: "",
                 reason: ""
             };
+
+            // Determine if we can switch pokemon
+            var canswitch = false;
+            if(this.request.active[0].trapped) { canswitch = false; } // Trapped
+            else {
+                canswitch = _.any(this.request.side.pokemon, function(pokemon) {
+                    return pokemon.condition.indexOf("fnt") < 0 && !pokemon.active;
+                });
+            }
+
             for(var i = 0; i < moves.length; ++i) {
                 logger.info(moves[i].id + ": " + moves[i].move);
             }
@@ -343,6 +353,18 @@ module.exports = new JS.Class({
                     return supereffective;
                 });
             }
+
+            // Potentially switch out
+            if(!choice && canswitch) {
+                var shouldSwitch = _.any(this.oppPokemon.getTypes(), function(oppType) {
+                    return Tools.getEffectiveness(oppType, battleroom.activePokemon.getTypes()) > 0 && Tools.getImmunity(oppType, battleroom.oppPokemon.getTypes());
+                });
+                if(shouldSwitch) {
+                    choice = "switch";
+                    decision.reason = this.oppPokemon.name + " is super effective against " + this.activePokemon.name;
+                }
+            }
+
             //Find move with STAB
             if(!choice) {
                 choice = _.find(moves, function(move) {
@@ -387,13 +409,21 @@ module.exports = new JS.Class({
                 choice = moves[Math.floor(Math.random()*moves.length)];
                 decision.reason = "Could not satisfy other constraints.";
             }
+
+            // Push result to decision log
             decision.choice = choice;
-            if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
-	        this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
-            else
-                this.send("/choose move " + choice.move + "|" + rqid,this.id);
             decisionslogger.info("Decision: " + JSON.stringify(decision));
             this.decisions.push(decision);
+
+            if(choice != "switch") {
+                if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
+    	           this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
+                else
+                    this.send("/choose move " + choice.move + "|" + rqid,this.id);
+            } else {
+                this.makeSwitch(this.request.rqid, this.request.side.pokemon);
+            }
+
 	},
 	makeSwitch: function(rqid, pokemon) {
 		var decision = {
@@ -453,7 +483,7 @@ module.exports = new JS.Class({
 			});
 		}
 
-                //Choose pokemon that receives neutral damage from opponent
+        //Choose pokemon that receives neutral damage from opponent
 		if(!choice) {
 			choice = _.find(choices, function(i) {
 				var pokemon = battleroom.state.p1.pokemon[i];
