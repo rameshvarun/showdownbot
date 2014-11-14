@@ -30,14 +30,23 @@ function getFeatures(battle) {
 
 function eval(battle) {
 	var features = getFeatures(battle);
-	var value = features.currentPokemonHP - features.oppPokemonHP;
+	var value = -features.oppPokemonHP;
 	logger.trace(JSON.stringify(features) + ": " + value);
 	return value;
 }
 
 var decide = module.exports.decide = function(battle, choices) {
-	var MAX_DEPTH = 1;
-	return playerTurn(battle, MAX_DEPTH, choices);
+	try {
+		var MAX_DEPTH = 1;
+		var choice = playerTurn(battle, MAX_DEPTH, choices);
+		if(!choice) logger.error("Minimax did not return choice.");
+		else return choice;
+	} catch (e) {
+		logger.error(e);
+	}
+
+	logger.debug("Picking random move");
+	return _.shuffle(choices)[0];
 }
 
 //Manually clones a battle object.

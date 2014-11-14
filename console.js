@@ -17,7 +17,7 @@ log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
 var CHALLENGING = false;
 
 // Challenging logic
-var MAX_ROOMS = 1;
+var MAX_ROOMS = 3;
 setInterval(function() {
 	if(CHALLENGING && _.values(bot.ROOMS).length < MAX_ROOMS) {
 		logger.info("Challenging...");
