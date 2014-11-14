@@ -271,14 +271,15 @@ module.exports = new JS.Class({
         this.send("/choose " + minimax.toChoiceString(result) + "|" + rqid, this.id);
     },
     notifyRequest: function() {
+        var room = this;
         switch (this.request.requestType) {
             case 'move':
                 logger.info(this.title + ": I need to make a move.");
-                setTimeout(function() { this.makeMove(this.request.rqid); }, 2000);
+                setTimeout(function() { room.makeMove(room.request.rqid); }, 2000);
                 break;
             case 'switch':
                 logger.info(this.title + ": I need to make a switch.");
-                setTimeout(function() { this.makeSwitch(this.request.rqid); }, 2000);
+                setTimeout(function() { room.makeSwitch(room.request.rqid); }, 2000);
                 break;
             case 'team':
                 logger.info(this.title + ": I need to pick my team order.");

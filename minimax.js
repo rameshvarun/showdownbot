@@ -80,7 +80,7 @@ function playerTurn(battle, depth, givenchoices) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = clone(battle, true);
+		var newbattle = battle;
 
 		// Register action
 		newbattle.choose('p1', toChoiceString(choices[i]), newbattle.rqid)
@@ -114,7 +114,7 @@ function opponentTurn(battle, depth) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = clone(battle, true);
+		var newbattle = battle;
 
 		// Register action
 		newbattle.choose('p2', toChoiceString(choices[i]), newbattle.rqid)
