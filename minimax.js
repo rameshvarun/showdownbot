@@ -50,15 +50,23 @@ function battleClone(battle) {
     //collect pokemon data
     newBattle.p1.pokemon = [];
     for(var i in battle.p1.pokemon) {
-        newBattle.p1.pokemon.push(clone(battle.p1.pokemon[i], true));
+        var newPokemon = new BattlePokemon(battle.p1.pokemon[i].set, newBattle.p1);
+        if(battle.p1.active[0] === battle.p1.pokemon[i]) {
+            newPokemon.isActive = true;
+            newBattle.p1.active = [newPokemon];
+        }
+        newBattle.p1.pokemon.push(newPokemon);
     }
-    newBattle.p1.active = clone(battle.p1.active, true);
 
     newBattle.p2.pokemon = [];
     for(var i in battle.p2.pokemon) {
-        newBattle.p2.pokemon.push(clone(battle.p2.pokemon[i], true));
+        var newPokemon = new BattlePokemon(battle.p2.pokemon[i].set, newBattle.p2);
+        if(battle.p2.active[0] === battle.p2.pokemon[i]) {
+            newPokemon.isActive = true;
+            newBattle.p2.active = [newPokemon];
+        }
+        newBattle.p2.pokemon.push(newPokemon);
     }
-    newBattle.p2.active = clone(battle.p2.active, true);
     logger.trace("Finished cloning battle");
     return newBattle;
 }
