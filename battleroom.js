@@ -111,7 +111,10 @@ module.exports = new JS.Class({
                         var oldPokemon = this.oppPokemon;
 
                         // TODO: Understand more about the opposing pokemon
-                        this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
+                        var set = this.state.getTemplate(tokens2[1]);
+                        set.moves = set.randomBattleMoves;
+                        
+                        this.oppPokemon = new BattlePokemon(set, this.state.p2);
                         this.oppPokemon.position = 0;
                         this.state.p2.pokemon[0] = this.oppPokemon;
                         this.state.p2.active = [this.oppPokemon];

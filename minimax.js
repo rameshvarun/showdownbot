@@ -30,8 +30,9 @@ function getFeatures(battle) {
 
 function eval(battle) {
 	var features = getFeatures(battle);
-	logger.trace(JSON.stringify(features));
-	return features.currentPokemonHP - features.oppPokemonHP;
+	var value = features.currentPokemonHP - features.oppPokemonHP;
+	logger.trace(JSON.stringify(features) + ": " + value);
+	return value;
 }
 
 var decide = module.exports.decide = function(battle, choices) {
@@ -75,7 +76,7 @@ function playerTurn(battle, depth, givenchoices) {
 function opponentTurn(battle, depth) {
 	logger.trace("Opponent turn turn at depth " + depth);
 
-	var min_value = Number.INFINITY;
+	var min_value = Number.POSITIVE_INFINITY;
 	var min_action = null;
 
 	var choices = [];
