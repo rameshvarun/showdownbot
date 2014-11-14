@@ -116,6 +116,7 @@ module.exports = new JS.Class({
 
                         this.oppPokemon = new BattlePokemon(set, this.state.p2);
                         this.oppPokemon.position = 0;
+                        this.oppPokemon.isActive = true;
                         this.state.p2.pokemon[0] = this.oppPokemon;
                         this.state.p2.active = [this.oppPokemon];
 
@@ -220,6 +221,7 @@ module.exports = new JS.Class({
 
             if(pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];
+                this.state.p1.pokemon[i].isActive = true;
             }
 
             // TODO(rameshvarun): Somehow parse / load in current hp and status conditions

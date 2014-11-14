@@ -33,8 +33,6 @@ BattleSide = (function () {
 
 		this.team = this.battle.getTeam(this, team);
 		for (var i = 0; i < this.team.length && i < 6; i++) {
-			//console.log("NEW POKEMON: " + (this.team[i] ? this.team[i].name : '[unidentified]'));
-			logger.trace(JSON.stringify(this.team[i]));
 			this.pokemon.push(new BattlePokemon(Tools.getTemplate('unown'), this));
 		}
 		this.pokemonLeft = this.pokemon.length;

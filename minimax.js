@@ -42,10 +42,9 @@ var decide = module.exports.decide = function(battle, choices) {
 
 //Manually clones a battle object.
 function battleClone(battle) {
-    var newBattle = Battle.construct(battle.roomid, 'clone', false);
-    newBattle.p1 = new BattleSide(battle.p1.name, newBattle, 0);
-    newBattle.p2 = new BattleSide(battle.p2.name, newBattle, 1);
-    newBattle.sides = [newBattle.p1, newBattle.p2];
+    newBattle = Battle.construct(battle.roomid, 'base', false);
+    newBattle.join('p1', 'botPlayer');
+    newBattle.join('p2', 'humanPlayer');
 
     //collect pokemon data
     newBattle.p1.pokemon = [];
@@ -88,11 +87,9 @@ function playerTurn(battle, depth, givenchoices) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battleClone(battle, true);
 
 		// Register action
-		newbattle.choose('p1', toChoiceString(choices[i]), newbattle.rqid)
-		var value = opponentTurn(newbattle, depth);
+		var value = opponentTurn(battle, depth, choices[i]);
 		if(value > max_value) {
 			max_value = value;
 			max_action = choices[i];
@@ -103,7 +100,7 @@ function playerTurn(battle, depth, givenchoices) {
 	else return max_value;
 }
 
-function opponentTurn(battle, depth) {
+function opponentTurn(battle, depth, playerAction) {
 	logger.trace("Opponent turn turn at depth " + depth);
 
 	var min_value = Number.POSITIVE_INFINITY;
@@ -122,9 +119,10 @@ function opponentTurn(battle, depth) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battleClone(battle, true);
+		var newbattle = battleClone(battle);
 
 		// Register action
+		newbattle.choose('p1', toChoiceString(playerAction), newbattle.rqid)
 		newbattle.choose('p2', toChoiceString(choices[i]), newbattle.rqid)
 		var value = playerTurn(newbattle, depth - 1);
 
