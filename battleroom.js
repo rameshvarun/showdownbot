@@ -113,7 +113,7 @@ module.exports = new JS.Class({
                         // TODO: Understand more about the opposing pokemon
                         var set = this.state.getTemplate(tokens2[1]);
                         set.moves = set.randomBattleMoves;
-                        
+
                         this.oppPokemon = new BattlePokemon(set, this.state.p2);
                         this.oppPokemon.position = 0;
                         this.state.p2.pokemon[0] = this.oppPokemon;
@@ -230,11 +230,6 @@ module.exports = new JS.Class({
         logger.info(this.title + ": My current side is " + this.side);
     },
     makeMove: function(rqid) {
-        if (this.oppPokemon === '' || !this.oppPokemon) { //try again after some time
-            logger.info("Can't make a move until we determine opponent Pokemon!");
-            return;
-        }
-
         var choices = [];
 
         _.each(this.request.active[0].moves, function(move) {
@@ -279,11 +274,11 @@ module.exports = new JS.Class({
         switch (this.request.requestType) {
             case 'move':
                 logger.info(this.title + ": I need to make a move.");
-                this.makeMove(this.request.rqid);
+                setTimeout(function() { this.makeMove(this.request.rqid); }, 2000);
                 break;
             case 'switch':
                 logger.info(this.title + ": I need to make a switch.");
-                this.makeSwitch(this.request.rqid);
+                setTimeout(function() { this.makeSwitch(this.request.rqid); }, 2000);
                 break;
             case 'team':
                 logger.info(this.title + ": I need to pick my team order.");
