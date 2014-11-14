@@ -39,6 +39,28 @@ var decide = module.exports.decide = function(battle, choices) {
 	return playerTurn(battle, MAX_DEPTH, choices);
 }
 
+//Manually clones a battle object.
+function battleClone(battle) {
+    var newBattle = Battle.construct(battle.roomid, 'clone', false);
+    newBattle.p1 = new BattleSide(battle.p1.name, newBattle, 0);
+    newBattle.p2 = new BattleSide(battle.p2.name, newBattle, 1);
+    newBattle.sides = [newBattle.p1, newBattle.p2];
+
+    //collect pokemon data
+    newBattle.p1.pokemon = [];
+    for(var i in battle.p1.pokemon) {
+        newBattle.p1.pokemon.push(clone(battle.p1.pokemon[i], true));
+    }
+    newBattle.p1.active = clone(battle.p1.active, true);
+
+    newBattle.p2.pokemon = [];
+    for(var i in battle.p2.pokemon) {
+        newBattle.p2.pokemon.push(clone(battle.p2.pokemon[i], true));
+    }
+    newBattle.p2.active = clone(battle.p2.active, true);
+    logger.trace("Finished cloning battle");
+    return newBattle;
+}
 
 function playerTurn(battle, depth, givenchoices) {
 	logger.trace("Player turn at depth " + depth);
@@ -57,7 +79,7 @@ function playerTurn(battle, depth, givenchoices) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = clone(battle, true);
+		var newbattle = battleClone(battle, true);
 
 		// Register action
 		newbattle.choose('p1', toChoiceString(choices[i]), newbattle.rqid)
@@ -91,7 +113,7 @@ function opponentTurn(battle, depth) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = clone(battle, true);
+		var newbattle = battleClone(battle, true);
 
 		// Register action
 		newbattle.choose('p2', toChoiceString(choices[i]), newbattle.rqid)
