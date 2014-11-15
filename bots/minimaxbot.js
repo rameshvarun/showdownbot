@@ -26,8 +26,8 @@ function eval(battle) {
 }
 
 var decide = module.exports.decide = function(battle, choices) {
-	var MAX_DEPTH = 1;
-	var maxNode = playerTurn(battle, MAX_DEPTH, choices);
+	var MAX_DEPTH = 2;
+	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
 	return {
 		type: maxNode.action.type,
 		id: maxNode.action.id,
@@ -35,7 +35,7 @@ var decide = module.exports.decide = function(battle, choices) {
 	};
 }
 
-function playerTurn(battle, depth, givenchoices) {
+function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	logger.trace("Player turn at depth " + depth);
 
 	// Node in the minimax tree
@@ -57,12 +57,16 @@ function playerTurn(battle, depth, givenchoices) {
 
 		for(var i = 0; i < choices.length; ++i) {
 			// Try action
-			var minNode = opponentTurn(battle, depth, choices[i]);
+			var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
 			node.children.push(minNode);
 
-			if(minNode.value > node.value) {
-				node.value = minNode.value;
-				node.action = choices[i];
+			if(minNode.value != null) {
+				if(minNode.value > node.value) {
+					node.value = minNode.value;
+					node.action = choices[i];
+				}
+				alpha = Math.max(alpha, minNode.value);
+				if(beta <= alpha) break;
 			}
 		}
 
@@ -72,7 +76,7 @@ function playerTurn(battle, depth, givenchoices) {
 	return node;
 }
 
-function opponentTurn(battle, depth, playerAction) {
+function opponentTurn(battle, depth, alpha, beta, playerAction) {
 	logger.trace("Opponent turn turn at depth " + depth);
 
 	// Node in the minimax tree
@@ -90,10 +94,9 @@ function opponentTurn(battle, depth, playerAction) {
 
 	// Make sure we can't switch to an unown
 	choices = _.reject(choices, function(choice) {
-		//if(choice.type == "switch" && battle.p2.pokemon[choice.id].name == "Unown") return true;
+		if(choice.type == "switch" && battle.p2.pokemon[choice.id].name == "Unown") return true;
 		return false;
 	});
-	//choices = _.sample(choices, 1); // For testing
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
@@ -103,14 +106,19 @@ function opponentTurn(battle, depth, playerAction) {
 		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid)
 		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i]), newbattle.rqid)
 
-		var maxNode = playerTurn(newbattle, depth - 1);
+		var maxNode = playerTurn(newbattle, depth - 1, alpha, beta);
 		node.children.push(maxNode);
 
-		if(maxNode.value < node.value) {
-			node.value = maxNode.value;
-			node.action = choices[i];
+		if(maxNode.value != null) {
+			if(maxNode.value < node.value) {
+				node.value = maxNode.value;
+				node.action = choices[i];
+			}
+			beta = Math.min(beta, maxNode.value);
+			if(beta <= alpha) break;
 		}
-	
-}	node.choices = choices;
+	}
+
+	node.choices = choices;
 	return node;
 }

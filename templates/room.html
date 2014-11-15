@@ -22,6 +22,7 @@
 		html += "<div class='panel " + panel_type + "'>";
 		html += "<div class='panel-heading'>";
 		html += title;
+		html += "<span class='glyphicon glyphicon-chevron-down pull-right' aria-hidden='true'></span>"
 		html += "</div>";
 
 		html += "<div class='panel-body'>";
@@ -36,7 +37,9 @@
 		for(var i = 0; i < node.choices.length; ++i) {
 			var pronoun = (node.type == "max") ? "I" : "They";
 			var title = pronoun + " " + node.choices[i].type + " " + node.choices[i].id;
-			html += panel(title, node.children[i], selected && (node.action.id == node.choices[i].id));
+
+			var sel = selected && node.action && (node.action.id == node.choices[i].id);
+			html += panel(title, node.children[i], sel);
 		}
 
 		html += "</div>";
@@ -46,5 +49,11 @@
 
 	
 	$tree.append(panel("START", lastDecision.tree, true));
+
+	$(".glyphicon-chevron-down").click(function() {
+		$(this).parent().parent().children(".panel-body").slideToggle();
+	});
+
+	$(".glyphicon-chevron-down").trigger("click");
 </script>
 {% endblock %}

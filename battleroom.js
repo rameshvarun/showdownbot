@@ -38,6 +38,17 @@ var BattleRoom = new JS.Class({
         this.state = Battle.construct(id, 'base', false);
         this.state.join('p1', 'botPlayer');
         this.state.join('p2', 'humanPlayer');
+        this.state.start();
+
+        // Our current belief of the state of the battle
+        this.belief = {
+            myside : {
+                pokemon : []
+            },
+            theirside: {
+                pokemon : []
+            }
+        }
 
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
@@ -110,7 +121,7 @@ var BattleRoom = new JS.Class({
 
                         // TODO: Understand more about the opposing pokemon
                         var set = this.state.getTemplate(tokens2[1]);
-                        set.moves = set.randomBattleMoves;
+                        set.moves = _.sample(set.randomBattleMoves, 4);
 
                         this.oppPokemon = new BattlePokemon(set, this.state.p2);
                         this.oppPokemon.position = 0;
@@ -219,7 +230,7 @@ var BattleRoom = new JS.Class({
         setTimeout(function() {
             var decision = BattleRoom.parseRequest(request);
 
-            var result = minimaxbot.decide(room.state, decision.choices);
+            var result = minimaxbot.decide(room.state.clone(), decision.choices);
             room.decisions.push(result);
             room.send("/choose " + BattleRoom.toChoiceString(result) + "|" + decision.rqid, room.id);
         }, 2000);

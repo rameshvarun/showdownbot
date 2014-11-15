@@ -17,6 +17,8 @@ require('./globals');
 // Circular, recursive clone
 var clone = require("clone");
 
+var _ = require("underscore");
+
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
@@ -2453,7 +2455,6 @@ Battle = (function () {
 			this.p1.isActive = true;
 			this.add('player', 'p1', this.p1.name, avatar);
 		}
-		this.start();
 		return true;
 	};
 
@@ -2565,6 +2566,7 @@ Battle = (function () {
 				newBattle.p1.active = [newPokemon];
 			}
 			newBattle.p1.pokemon.push(newPokemon);
+			_.sortBy(newBattle.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
 		}
 
 		newBattle.p2.pokemon = [];
@@ -2575,8 +2577,11 @@ Battle = (function () {
 				newBattle.p2.active = [newPokemon];
 			}
 			newBattle.p2.pokemon.push(newPokemon);
+			_.sortBy(newBattle.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
 		}
 		logger.trace("Finished cloning battle");
+
+		newBattle.start();
 		return newBattle;
 	}
 
