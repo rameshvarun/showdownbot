@@ -42,6 +42,12 @@ app.get('/', function(req, res){
 	});
 });
 
+// Challenge a specific user
+app.get('/challenge', function(req, res){
+	bot.send("/challenge " + req.query.user + ", randombattle", null);
+	res.redirect("/");
+});
+
 // Challenging control
 app.get('/startchallenging', function(req, res){
 	CHALLENGING = true;
