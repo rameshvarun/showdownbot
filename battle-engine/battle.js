@@ -2566,8 +2566,11 @@ Battle = (function () {
 				newBattle.p1.active = [newPokemon];
 			}
 			newBattle.p1.pokemon.push(newPokemon);
-			_.sortBy(newBattle.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+			
+			// Transfer health conditions
+			newPokemon.hp = this.p1.pokemon[i].hp;
 		}
+		
 
 		newBattle.p2.pokemon = [];
 		for(var i in this.p2.pokemon) {
@@ -2577,8 +2580,15 @@ Battle = (function () {
 				newBattle.p2.active = [newPokemon];
 			}
 			newBattle.p2.pokemon.push(newPokemon);
-			_.sortBy(newBattle.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+			
+			// Transfer health conditions
+			newPokemon.hp = this.p1.pokemon[i].hp;
 		}
+
+		// Make sure active pokemon are up front in list
+		newBattle.p1.pokemon = _.sortBy(newBattle.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+		newBattle.p2.pokemon = _.sortBy(newBattle.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+
 		logger.trace("Finished cloning battle");
 
 		newBattle.start();

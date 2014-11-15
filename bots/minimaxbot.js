@@ -6,21 +6,20 @@ log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
 var _ = require("underscore");
 var BattleRoom = require("./../battleroom");
 
+var randombot = require("./randombot");
+
 function getFeatures(battle) {
 	features = {};
 
-	var currentPokemon = battle.p1.active[0];
-	features.currentPokemonHP = currentPokemon.hp;
-
-	var oppPokemon = battle.p2.active[0];
-	features.oppPokemonHP = oppPokemon.hp;
+	features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){ return memo + pokemon.hp; }, 0);
+	features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){ return memo + pokemon.hp; }, 0);
 
 	return features;
 }
 
 function eval(battle) {
 	var features = getFeatures(battle);
-	var value = -features.oppPokemonHP;
+	var value = features.mySum - features.theirSum;
 	logger.trace(JSON.stringify(features) + ": " + value);
 	return value;
 }
@@ -28,6 +27,7 @@ function eval(battle) {
 var decide = module.exports.decide = function(battle, choices) {
 	var MAX_DEPTH = 2;
 	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
+	if(!maxNode.action) randombot.decide(battle, choices);
 	return {
 		type: maxNode.action.type,
 		id: maxNode.action.id,
