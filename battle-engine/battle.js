@@ -14,6 +14,9 @@
 require('sugar');
 require('./globals');
 
+// Circular, recursive clone
+var clone = require("clone");
+
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
@@ -2545,6 +2548,40 @@ Battle = (function () {
 			}
 		}
 	}
+
+	//Manually clones a battle object.
+	Battle.prototype.clone = function() {
+		// TODO: Needs a ton of work
+		return clone(this);
+
+		/*newBattle = Battle.construct(this.roomid, 'base', false);
+		newBattle.join('p1', 'botPlayer');
+		newBattle.join('p2', 'humanPlayer');
+
+		//collect pokemon data
+		newBattle.p1.pokemon = [];
+		for(var i in this.p1.pokemon) {
+			var newPokemon = new BattlePokemon(this.p1.pokemon[i].set, newBattle.p1);
+			if(this.p1.active[0] === this.p1.pokemon[i]) {
+				newPokemon.isActive = true;
+				newBattle.p1.active = [newPokemon];
+			}
+			newBattle.p1.pokemon.push(newPokemon);
+		}
+
+		newBattle.p2.pokemon = [];
+		for(var i in this.p2.pokemon) {
+			var newPokemon = new BattlePokemon(this.p2.pokemon[i].set, newBattle.p2);
+			if(this.p2.active[0] === this.p2.pokemon[i]) {
+				newPokemon.isActive = true;
+				newBattle.p2.active = [newPokemon];
+			}
+			newBattle.p2.pokemon.push(newPokemon);
+		}
+		logger.trace("Finished cloning battle");
+		return newBattle;*/
+	}
+
 
 	return Battle;
 })();

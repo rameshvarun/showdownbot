@@ -6,15 +6,6 @@ log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
 require('sugar')
 
 var _ = require("underscore");
-var clone = require("clone");
-
-var toChoiceString = module.exports.toChoiceString = function (choice) {
-    if(choice.type == "move") {
-        return "move " + choice.id;
-    } else if(choice.type == "switch") {
-        return "switch " + (choice.id + 1);
-    }
-}
 
 function getFeatures(battle) {
 	features = {};
@@ -47,36 +38,6 @@ var decide = module.exports.decide = function(battle, choices) {
 
 	logger.debug("Picking random move");
 	return _.shuffle(choices)[0];
-}
-
-//Manually clones a battle object.
-function battleClone(battle) {
-    newBattle = Battle.construct(battle.roomid, 'base', false);
-    newBattle.join('p1', 'botPlayer');
-    newBattle.join('p2', 'humanPlayer');
-
-    //collect pokemon data
-    newBattle.p1.pokemon = [];
-    for(var i in battle.p1.pokemon) {
-        var newPokemon = new BattlePokemon(battle.p1.pokemon[i].set, newBattle.p1);
-        if(battle.p1.active[0] === battle.p1.pokemon[i]) {
-            newPokemon.isActive = true;
-            newBattle.p1.active = [newPokemon];
-        }
-        newBattle.p1.pokemon.push(newPokemon);
-    }
-
-    newBattle.p2.pokemon = [];
-    for(var i in battle.p2.pokemon) {
-        var newPokemon = new BattlePokemon(battle.p2.pokemon[i].set, newBattle.p2);
-        if(battle.p2.active[0] === battle.p2.pokemon[i]) {
-            newPokemon.isActive = true;
-            newBattle.p2.active = [newPokemon];
-        }
-        newBattle.p2.pokemon.push(newPokemon);
-    }
-    logger.trace("Finished cloning battle");
-    return newBattle;
 }
 
 function playerTurn(battle, depth, givenchoices) {
@@ -128,7 +89,7 @@ function opponentTurn(battle, depth, playerAction) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battleClone(battle);
+		var newbattle = battle.clone();
 
 		// Register action
 		newbattle.choose('p1', toChoiceString(playerAction), newbattle.rqid)
