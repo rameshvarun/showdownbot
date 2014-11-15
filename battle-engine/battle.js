@@ -110,13 +110,11 @@ Battle = (function () {
 	Battle.prototype.reportPercentages = false;
 
 	Battle.prototype.toString = function () {
+		// TODO: Need better toString function to understand battle
 		var data = ''
-		data += 'Turn: ' + Battle.prototype.turn;
-		data += '\nPlayer 1: ' + Battle.prototype.p1 + ' Player2: ' + Battle.prototype.p2;
-		data += '\nWeather: ' + Battle.prototype.weather + ' Terrain: ' + Battle.prototype.terrain;
-		data += '\nLastMove: ' + Battle.prototype.lastMove;
-		data += '\nActive: ' + Battle.prototype.activePokemon + ' using ' + Battle.prototype.activeMove + ' on ' + Battle.prototype.activeTarget;
-		data += '\n';
+		data += 'Turn: ' + this.turn + "\n";
+		data += this.p1.name + " active:" + this.p1.active[0].name + " " + this.p1.active[0].getHealth() + "\n";
+		data += this.p2.name + " active:" + this.p2.active[0].name + " " + this.p2.active[0].getHealth() + "\n";
 		return data;
 	};
 
@@ -2552,9 +2550,9 @@ Battle = (function () {
 	//Manually clones a battle object.
 	Battle.prototype.clone = function() {
 		// TODO: Needs a ton of work
-		return clone(this);
+		//return clone(this);
 
-		/*newBattle = Battle.construct(this.roomid, 'base', false);
+		newBattle = Battle.construct(this.roomid, 'base', false);
 		newBattle.join('p1', 'botPlayer');
 		newBattle.join('p2', 'humanPlayer');
 
@@ -2579,7 +2577,7 @@ Battle = (function () {
 			newBattle.p2.pokemon.push(newPokemon);
 		}
 		logger.trace("Finished cloning battle");
-		return newBattle;*/
+		return newBattle;
 	}
 
 

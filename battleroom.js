@@ -28,10 +28,7 @@ var Items = require("./data/items").BattleItems;
 
 var _ = require("underscore");
 
-var minimax = require("./minimax");
-var randombot = require("./bots/randombot");
-
-var BattleRoom = module.exports = new JS.Class({
+var BattleRoom = new JS.Class({
     initialize: function(id, sendfunc) {
         this.id = id;
         this.title = "Untitled";
@@ -222,7 +219,8 @@ var BattleRoom = module.exports = new JS.Class({
         setTimeout(function() {
             var decision = BattleRoom.parseRequest(request);
 
-            var result = randombot.decide(this.state, decision.choices);
+            var result = minimaxbot.decide(room.state, decision.choices);
+            room.decisions.push(result);
             room.send("/choose " + BattleRoom.toChoiceString(result) + "|" + decision.rqid, room.id);
         }, 2000);
     },
@@ -271,3 +269,7 @@ var BattleRoom = module.exports = new JS.Class({
         }
     }
 });
+module.exports = BattleRoom;
+
+var minimaxbot = require("./bots/minimaxbot");
+var randombot = require("./bots/randombot");

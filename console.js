@@ -58,6 +58,17 @@ app.get('/endchallenging', function(req, res){
 	res.redirect("/");
 });
 
+app.get('/room', function(req, res){
+	if(bot.ROOMS[req.query.id]) {
+		res.render("room.html", {
+			game: bot.ROOMS[req.query.id],
+			stringify : JSON.stringify
+		});
+	} else {
+		res.redirect("/");
+	}
+});
+
 app.get('/replay', function(req, res){
 	db.findOne({ id: req.query.id }).exec(function(err, game) {
 		game.decisions = JSON.parse(game.decisions);
@@ -67,7 +78,6 @@ app.get('/replay', function(req, res){
 		});
 	});
 });
-
 
 app.get('/search', function(req, res){
 	logger.debug("Asked to query from web console.");
