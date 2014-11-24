@@ -13,5 +13,8 @@
     "sockjs-client-ws": "0.1.0",
     "sugar": "^1.4.1",
     "underscore": "1.x"
+  },
+  "scripts" : {
+    "start" : "bot.js"
   }
 }
