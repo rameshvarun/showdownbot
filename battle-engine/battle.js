@@ -2546,14 +2546,14 @@ Battle = (function () {
 				this.send('update', this.log.slice(logPos));
 			}
 		}
-	}
+	};
 
 	//Manually clones a battle object.
 	Battle.prototype.clone = function() {
 		// TODO: Needs a ton of work
 		//return clone(this);
 
-		newBattle = Battle.construct(this.roomid, 'base', false);
+	        var newBattle = Battle.construct(this.roomid, 'base', false);
 		newBattle.join('p1', 'botPlayer');
 		newBattle.join('p2', 'humanPlayer');
 
@@ -2566,11 +2566,11 @@ Battle = (function () {
 				newBattle.p1.active = [newPokemon];
 			}
 			newBattle.p1.pokemon.push(newPokemon);
-			
+
 			// Transfer health conditions
 			newPokemon.hp = this.p1.pokemon[i].hp;
 		}
-		
+
 
 		newBattle.p2.pokemon = [];
 		for(var i in this.p2.pokemon) {
@@ -2580,7 +2580,7 @@ Battle = (function () {
 				newBattle.p2.active = [newPokemon];
 			}
 			newBattle.p2.pokemon.push(newPokemon);
-			
+
 			// Transfer health conditions
 			newPokemon.hp = this.p1.pokemon[i].hp;
 		}
@@ -2593,7 +2593,7 @@ Battle = (function () {
 
 		newBattle.start();
 		return newBattle;
-	}
+	};
 
 
 	return Battle;

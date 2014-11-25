@@ -197,7 +197,7 @@ var BattleRoom = new JS.Class({
                     spd: 31,
                     spe: 31
                 },
-                item: (pokemon.item === '') ? '' : Items[pokemon.item].name,
+                item: (pokemon.item || pokemon.item === '') ? '' : Items[pokemon.item].name,
                 level: level,
                 active: pokemon.active,
                 shiny: false

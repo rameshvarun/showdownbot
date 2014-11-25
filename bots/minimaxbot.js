@@ -8,11 +8,16 @@ var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
 
+//TODO: Features should not take into account Unown pokemon.
 function getFeatures(battle) {
 	features = {};
 
-	features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){ return memo + pokemon.hp; }, 0);
-	features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){ return memo + pokemon.hp; }, 0);
+	features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){
+            return memo + pokemon.hp / pokemon.maxhp;
+        }, 0);
+	features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){
+            return memo + pokemon.hp / pokemon.maxhp;
+        }, 0);
 
 	return features;
 }
@@ -27,7 +32,7 @@ function eval(battle) {
 var decide = module.exports.decide = function(battle, choices) {
 	var MAX_DEPTH = 2;
 	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
-	if(!maxNode.action) randombot.decide(battle, choices);
+	if(!maxNode.action) return randombot.decide(battle, choices);
 	return {
 		type: maxNode.action.type,
 		id: maxNode.action.id,
