@@ -1165,10 +1165,8 @@ Battle = (function () {
 			// need two players to start
 			return;
 		}
-
 		this.p2.emitRequest({side: this.p2.getData()});
 		this.p1.emitRequest({side: this.p1.getData()});
-
 		if (this.started) {
 			this.makeRequest();
 			this.isActive = true;
@@ -2065,6 +2063,7 @@ Battle = (function () {
 		return false;
 	};
 	Battle.prototype.go = function () {
+            console.log("Implementing the choices that were selected by the players...");
 		this.add('');
 		if (this.currentRequest) {
 			this.currentRequest = '';
@@ -2565,10 +2564,10 @@ Battle = (function () {
 				newPokemon.isActive = true;
 				newBattle.p1.active = [newPokemon];
 			}
-			newBattle.p1.pokemon.push(newPokemon);
-
 			// Transfer health conditions
 			newPokemon.hp = this.p1.pokemon[i].hp;
+
+   		        newBattle.p1.pokemon.push(newPokemon);
 		}
 
 
@@ -2579,10 +2578,10 @@ Battle = (function () {
 				newPokemon.isActive = true;
 				newBattle.p2.active = [newPokemon];
 			}
-			newBattle.p2.pokemon.push(newPokemon);
-
 			// Transfer health conditions
-			newPokemon.hp = this.p1.pokemon[i].hp;
+			newPokemon.hp = this.p2.pokemon[i].hp;
+
+		        newBattle.p2.pokemon.push(newPokemon);
 		}
 
 		// Make sure active pokemon are up front in list

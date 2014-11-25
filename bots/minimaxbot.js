@@ -29,10 +29,13 @@ function eval(battle) {
 	return value;
 }
 
+var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
 	var MAX_DEPTH = 2;
 	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
 	if(!maxNode.action) return randombot.decide(battle, choices);
+        logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
+        logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
 	return {
 		type: maxNode.action.type,
 		id: maxNode.action.id,
@@ -71,6 +74,7 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 					node.action = choices[i];
 				}
 				alpha = Math.max(alpha, minNode.value);
+                                overallMinNode = minNode;
 				if(beta <= alpha) break;
 			}
 		}
@@ -105,12 +109,21 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battle.clone();
+		var newbattle = battle.clone(); //it appears that the clone is still failing to completely replicate state
 
 		// Register action, let battle simulate
-		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid)
-		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i]), newbattle.rqid)
-
+		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i]), newbattle.rqid);
+                logger.info("Player action: " + BattleRoom.toChoiceString(playerAction));
+                logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i]));
+                logger.info("My Resulting Health:");
+                for(var j = 0; j < newbattle.p1.pokemon.length; j++) {
+                    logger.info(newbattle.p1.pokemon[j].id + ": " + newbattle.p1.pokemon[j].hp + "/" + newbattle.p1.pokemon[j].maxhp);
+                }
+                logger.info("Opponent's Resulting Health:");
+                for(var j = 0; j < newbattle.p2.pokemon.length; j++) {
+                    logger.info(newbattle.p2.pokemon[j].id + ": " + newbattle.p2.pokemon[j].hp + "/" + newbattle.p2.pokemon[j].maxhp);
+                }
 		var maxNode = playerTurn(newbattle, depth - 1, alpha, beta);
 		node.children.push(maxNode);
 
