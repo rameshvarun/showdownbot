@@ -53,7 +53,7 @@ var Typechart = require("./data/typechart");
 
 // Sends a piece of data to the given room
 // Room can be null for a global command
-function send(data, room) {
+var send = module.exports.send = function(data, room) {
 	if (room && room !== 'lobby' && room !== true) {
 		data = room+'|'+data;
 	} else if (room !== true) {

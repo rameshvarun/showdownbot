@@ -28,9 +28,7 @@ var Items = require("./data/items").BattleItems;
 
 var _ = require("underscore");
 
-var minimax = require("./minimax");
-
-module.exports = new JS.Class({
+var BattleRoom = new JS.Class({
     initialize: function(id, sendfunc) {
         this.id = id;
         this.title = "Untitled";
@@ -40,6 +38,17 @@ module.exports = new JS.Class({
         this.state = Battle.construct(id, 'base', false);
         this.state.join('p1', 'botPlayer');
         this.state.join('p2', 'humanPlayer');
+        this.state.start();
+
+        // Our current belief of the state of the battle
+        this.belief = {
+            myside : {
+                pokemon : []
+            },
+            theirside: {
+                pokemon : []
+            }
+        }
 
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
@@ -112,7 +121,7 @@ module.exports = new JS.Class({
 
                         // TODO: Understand more about the opposing pokemon
                         var set = this.state.getTemplate(tokens2[1]);
-                        set.moves = set.randomBattleMoves;
+                        set.moves = _.sample(set.randomBattleMoves, 4);
 
                         this.oppPokemon = new BattlePokemon(set, this.state.p2);
                         this.oppPokemon.position = 0;
@@ -121,10 +130,6 @@ module.exports = new JS.Class({
                         this.state.p2.active = [this.oppPokemon];
 
                         logger.info("Opponent Switches To: " + this.oppPokemon.name);
-
-                        if (this.request.active) {
-                            this.makeMove(this.request.rqid);
-                        }
                     }
                 } else if (tokens[1] === 'move') {
 
@@ -153,24 +158,12 @@ module.exports = new JS.Class({
             return;
         }
 
-        request.requestType = null;
-        var notifyObject = null;
-        if (request.active) {
-            request.requestType = "move";
-        } else if (request.forceSwitch) {
-            request.requestType = 'switch';
-        } else if (request.teamPreview) {
-            request.requestType = 'team';
-        } else if (request.wait) {
-            request.requestType = 'wait';
-        }
+        if (request.side) this.updateSide(request.side, true);
 
-        this.choice = null;
-        this.request = request;
-        if (request.side) {
-            this.updateSide(request.side, true);
-        }
-        this.notifyRequest();
+        if (request.active) logger.info(this.title + ": I need to make a move.");
+        if (request.forceSwitch) logger.info(this.title + ": I need to make a switch.");
+
+        if (request.active || request.forceSwitch) this.makeMove(request);
     },
     updateSide: function(sideData) {
         if (!sideData || !sideData.id) return;
@@ -219,7 +212,7 @@ module.exports = new JS.Class({
                 this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
             }
 
-            if(pokemon.active) {
+            if (pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];
                 this.state.p1.pokemon[i].isActive = true;
             }
@@ -231,61 +224,63 @@ module.exports = new JS.Class({
         this.oppSide = (this.side === "p1") ? "p2" : "p1";
         logger.info(this.title + ": My current side is " + this.side);
     },
-    makeMove: function(rqid) {
-        var choices = [];
-
-        _.each(this.request.active[0].moves, function(move) {
-            if (!move.disabled && move.pp > 0) {
-                choices.push({
-                    "type": "move",
-                    "id": move.id
-                });
-            }
-        });
-
-        // Determine if we can switch pokemon
-        if (!this.request.active[0].trapped && !this.request.active[0].maybeTrapped) {
-            _.each(this.request.side.pokemon, function(pokemon, index) {
-                if (pokemon.condition.indexOf("fnt") < 0 && !pokemon.active) {
-                    choices.push({
-                        "type": "switch",
-                        "id": index
-                    });
-                }
-            });
-        }
-
-        var result = minimax.decide(this.state, choices);
-        this.send("/choose " + minimax.toChoiceString(result) + "|" + rqid, this.id);
-    },
-    makeSwitch: function(rqid, pokemon) {
-        var choices = [];
-        _.each(this.request.side.pokemon, function(pokemon, index) {
-            if (pokemon.condition.indexOf("fnt") < 0 && !pokemon.active) {
-                choices.push({
-                    "type": "switch",
-                    "id": index
-                });
-            }
-        });
-
-        var result = minimax.decide(this.state, choices);
-        this.send("/choose " + minimax.toChoiceString(result) + "|" + rqid, this.id);
-    },
-    notifyRequest: function() {
+    makeMove: function(request) {
         var room = this;
-        switch (this.request.requestType) {
-            case 'move':
-                logger.info(this.title + ": I need to make a move.");
-                setTimeout(function() { room.makeMove(room.request.rqid); }, 2000);
-                break;
-            case 'switch':
-                logger.info(this.title + ": I need to make a switch.");
-                setTimeout(function() { room.makeSwitch(room.request.rqid); }, 2000);
-                break;
-            case 'team':
-                logger.info(this.title + ": I need to pick my team order.");
-                break;
+
+        setTimeout(function() {
+            var decision = BattleRoom.parseRequest(request);
+
+            var result = minimaxbot.decide(room.state.clone(), decision.choices);
+            room.decisions.push(result);
+            room.send("/choose " + BattleRoom.toChoiceString(result) + "|" + decision.rqid, room.id);
+        }, 2000);
+    },
+    // Static class methods
+    extend: {
+        toChoiceString: function(choice) {
+            if (choice.type == "move") {
+                return "move " + choice.id;
+            } else if (choice.type == "switch") {
+                return "switch " + (choice.id + 1);
+            }
+        },
+        parseRequest: function(request) {
+            var choices = [];
+
+            // If we can make a move
+            if (request.active) {
+                _.each(request.active[0].moves, function(move) {
+                    if (!move.disabled && move.pp > 0) {
+                        choices.push({
+                            "type": "move",
+                            "id": move.id
+                        });
+                    }
+                });
+            }
+
+            // Switching options
+            var trapped = (request.active) ? (request.active[0].trapped || request.active[0].maybeTrapped) : false;
+            var canSwitch = request.forceSwitch || !trapped;
+            if (canSwitch) {
+                _.each(request.side.pokemon, function(pokemon, index) {
+                    if (pokemon.condition.indexOf("fnt") < 0 && !pokemon.active) {
+                        choices.push({
+                            "type": "switch",
+                            "id": index
+                        });
+                    }
+                });
+            }
+
+            return {
+                rqid: request.rqid,
+                choices: choices
+            };
         }
     }
 });
+module.exports = BattleRoom;
+
+var minimaxbot = require("./bots/minimaxbot");
+var randombot = require("./bots/randombot");

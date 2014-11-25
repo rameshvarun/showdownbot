@@ -136,6 +136,7 @@ BattleSide = (function () {
 			Array.prototype.slice.call(arguments).join('|'));
 	};
 	BattleSide.prototype.emitRequest = function (update) {
+		this.request = update; // Keep track of current request
 		this.battle.send('request', this.id + "\n" + this.battle.rqid + "\n" + JSON.stringify(update));
 	};
 	BattleSide.prototype.destroy = function () {

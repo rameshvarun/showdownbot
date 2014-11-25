@@ -17,7 +17,7 @@ log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
 var CHALLENGING = false;
 
 // Challenging logic
-var MAX_ROOMS = 1;
+var MAX_ROOMS = 3;
 setInterval(function() {
 	if(CHALLENGING && _.values(bot.ROOMS).length < MAX_ROOMS) {
 		logger.info("Challenging...");
@@ -42,6 +42,12 @@ app.get('/', function(req, res){
 	});
 });
 
+// Challenge a specific user
+app.get('/challenge', function(req, res){
+	bot.send("/challenge " + req.query.user + ", randombattle", null);
+	res.redirect("/");
+});
+
 // Challenging control
 app.get('/startchallenging', function(req, res){
 	CHALLENGING = true;
@@ -50,6 +56,17 @@ app.get('/startchallenging', function(req, res){
 app.get('/endchallenging', function(req, res){
 	CHALLENGING = false;
 	res.redirect("/");
+});
+
+app.get('/room', function(req, res){
+	if(bot.ROOMS[req.query.id]) {
+		res.render("room.html", {
+			game: bot.ROOMS[req.query.id],
+			stringify : JSON.stringify
+		});
+	} else {
+		res.redirect("/");
+	}
 });
 
 app.get('/replay', function(req, res){
@@ -61,7 +78,6 @@ app.get('/replay', function(req, res){
 		});
 	});
 });
-
 
 app.get('/search', function(req, res){
 	logger.debug("Asked to query from web console.");

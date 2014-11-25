@@ -14,6 +14,11 @@
 require('sugar');
 require('./globals');
 
+// Circular, recursive clone
+var clone = require("clone");
+
+var _ = require("underscore");
+
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
@@ -107,13 +112,11 @@ Battle = (function () {
 	Battle.prototype.reportPercentages = false;
 
 	Battle.prototype.toString = function () {
+		// TODO: Need better toString function to understand battle
 		var data = ''
-		data += 'Turn: ' + Battle.prototype.turn;
-		data += '\nPlayer 1: ' + Battle.prototype.p1 + ' Player2: ' + Battle.prototype.p2;
-		data += '\nWeather: ' + Battle.prototype.weather + ' Terrain: ' + Battle.prototype.terrain;
-		data += '\nLastMove: ' + Battle.prototype.lastMove;
-		data += '\nActive: ' + Battle.prototype.activePokemon + ' using ' + Battle.prototype.activeMove + ' on ' + Battle.prototype.activeTarget;
-		data += '\n';
+		data += 'Turn: ' + this.turn + "\n";
+		data += this.p1.name + " active:" + this.p1.active[0].name + " " + this.p1.active[0].getHealth() + "\n";
+		data += this.p2.name + " active:" + this.p2.active[0].name + " " + this.p2.active[0].getHealth() + "\n";
 		return data;
 	};
 
@@ -2452,7 +2455,6 @@ Battle = (function () {
 			this.p1.isActive = true;
 			this.add('player', 'p1', this.p1.name, avatar);
 		}
-		this.start();
 		return true;
 	};
 
@@ -2545,6 +2547,54 @@ Battle = (function () {
 			}
 		}
 	}
+
+	//Manually clones a battle object.
+	Battle.prototype.clone = function() {
+		// TODO: Needs a ton of work
+		//return clone(this);
+
+		newBattle = Battle.construct(this.roomid, 'base', false);
+		newBattle.join('p1', 'botPlayer');
+		newBattle.join('p2', 'humanPlayer');
+
+		//collect pokemon data
+		newBattle.p1.pokemon = [];
+		for(var i in this.p1.pokemon) {
+			var newPokemon = new BattlePokemon(this.p1.pokemon[i].set, newBattle.p1);
+			if(this.p1.active[0] === this.p1.pokemon[i]) {
+				newPokemon.isActive = true;
+				newBattle.p1.active = [newPokemon];
+			}
+			newBattle.p1.pokemon.push(newPokemon);
+			
+			// Transfer health conditions
+			newPokemon.hp = this.p1.pokemon[i].hp;
+		}
+		
+
+		newBattle.p2.pokemon = [];
+		for(var i in this.p2.pokemon) {
+			var newPokemon = new BattlePokemon(this.p2.pokemon[i].set, newBattle.p2);
+			if(this.p2.active[0] === this.p2.pokemon[i]) {
+				newPokemon.isActive = true;
+				newBattle.p2.active = [newPokemon];
+			}
+			newBattle.p2.pokemon.push(newPokemon);
+			
+			// Transfer health conditions
+			newPokemon.hp = this.p1.pokemon[i].hp;
+		}
+
+		// Make sure active pokemon are up front in list
+		newBattle.p1.pokemon = _.sortBy(newBattle.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+		newBattle.p2.pokemon = _.sortBy(newBattle.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+
+		logger.trace("Finished cloning battle");
+
+		newBattle.start();
+		return newBattle;
+	}
+
 
 	return Battle;
 })();
