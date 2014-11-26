@@ -1102,6 +1102,17 @@ BattlePokemon = (function () {
 		this.battle = null;
 		this.side = null;
 	};
+
+	BattlePokemon.prototype.clone = function(side) {
+		var newPokemon = new BattlePokemon(this.set, side);
+
+		// Transfer health conditions
+		newPokemon.hp = this.hp;
+		newPokemon.boosts = Object.clone(this.boosts);
+
+		return newPokemon;
+	}
+
 	return BattlePokemon;
 })();
 
