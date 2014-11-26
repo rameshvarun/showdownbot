@@ -5,6 +5,7 @@
 {% block content %}
 <h1>{{game.title}}</h1>
 
+{{ format(game.state.toString()) | safe }}
 <div id="tree">
 </div>
 

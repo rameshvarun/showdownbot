@@ -62,7 +62,10 @@ app.get('/room', function(req, res){
 	if(bot.ROOMS[req.query.id]) {
 		res.render("room.html", {
 			game: bot.ROOMS[req.query.id],
-			stringify : JSON.stringify
+			stringify : JSON.stringify,
+			format: function(str) {
+				return str.replace(/\n/g, "<br>").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
+			}
 		});
 	} else {
 		res.redirect("/");

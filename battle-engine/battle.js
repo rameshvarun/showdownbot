@@ -115,8 +115,21 @@ Battle = (function () {
 		// TODO: Need better toString function to understand battle
 		var data = ''
 		data += 'Turn: ' + this.turn + "\n";
-		data += this.p1.name + " active:" + this.p1.active[0].name + " " + this.p1.active[0].getHealth() + "\n";
-		data += this.p2.name + " active:" + this.p2.active[0].name + " " + this.p2.active[0].getHealth() + "\n";
+		data += "\n";
+
+		data += "Weather: " + JSON.stringify(this.getWeather()) + "\n";
+		data += "PsuedoWeathers: " + JSON.stringify(_.keys(this.pseudoWeather)) + "\n";
+		data += "\n";
+
+		data += this.p1.name + "\n";
+		data += "\tactive:" + this.p1.active[0].name + " " + this.p1.active[0].getHealth() + "\n";
+		data += "\tside conditions:" + JSON.stringify(_.keys(this.p1.sideConditions)) + "\n";
+		data += "\n";
+
+		data += this.p2.name + "\n";
+		data += "\tactive:" + this.p2.active[0].name + " " + this.p2.active[0].getHealth() + "\n";
+		data += "\tside conditions:" + JSON.stringify(_.keys(this.p2.sideConditions)) + "\n";
+		data += "\n";
 		return data;
 	};
 
