@@ -5,6 +5,7 @@
 {% block content %}
 <h1>{{game.title}}</h1>
 
+{{ format(game.state.toString()) | safe }}
 <div id="tree">
 </div>
 
@@ -31,7 +32,7 @@
 		html += ", Depth: " + node.depth;
 
 		html += "<br><br>";
-		html += node.state.replace(/\n/g, "<br>");
+		html += node.state.replace(/\n/g, "<br>").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
 		html += "<br>";
 
 		for(var i = 0; i < node.choices.length; ++i) {
