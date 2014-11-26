@@ -113,21 +113,31 @@ Battle = (function () {
 
 	Battle.prototype.toString = function () {
 		// TODO: Need better toString function to understand battle
+
+		function formatPokemon(pokemon) {
+			var text = "";
+			text += pokemon.name + " " + pokemon.getHealth() + " Volitiles: " + JSON.stringify(_.keys(pokemon.volatiles));
+			text += " Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
+				return value != 0;
+			}));
+			return text;
+		}
+
 		var data = ''
 		data += 'Turn: ' + this.turn + "\n";
 		data += "\n";
 
-		data += "Weather: " + JSON.stringify(this.getWeather()) + "\n";
+		data += "Weather: " + (this.getWeather().id === "" ? "None" : this.getWeather().name) + "\n";
 		data += "PsuedoWeathers: " + JSON.stringify(_.keys(this.pseudoWeather)) + "\n";
 		data += "\n";
 
 		data += this.p1.name + "\n";
-		data += "\tactive:" + this.p1.active[0].name + " " + this.p1.active[0].getHealth() + "\n";
+		data += "\tactive:" + formatPokemon(this.p1.active[0]) + "\n";
 		data += "\tside conditions:" + JSON.stringify(_.keys(this.p1.sideConditions)) + "\n";
 		data += "\n";
 
 		data += this.p2.name + "\n";
-		data += "\tactive:" + this.p2.active[0].name + " " + this.p2.active[0].getHealth() + "\n";
+		data += "\tactive:" + formatPokemon(this.p2.active[0]) + "\n";
 		data += "\tside conditions:" + JSON.stringify(_.keys(this.p2.sideConditions)) + "\n";
 		data += "\n";
 		return data;

@@ -32,7 +32,7 @@
 		html += ", Depth: " + node.depth;
 
 		html += "<br><br>";
-		html += node.state.replace(/\n/g, "<br>");
+		html += node.state.replace(/\n/g, "<br>").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
 		html += "<br>";
 
 		for(var i = 0; i < node.choices.length; ++i) {
