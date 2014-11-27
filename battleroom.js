@@ -49,6 +49,8 @@ var BattleRoom = new JS.Class({
 
         this.decisions = [];
         this.log = "";
+
+        this.state.start();
     },
     init: function(data) {
         var log = data.split('\n');
@@ -116,14 +118,20 @@ var BattleRoom = new JS.Class({
             pokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
             var set = this.state.getTemplate(pokeName);
             set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
-            pokemon = new BattlePokemon(set, this.state.p2);
+            pokemon = new BattlePokemon(set, battleside);
         }
         //opponent hp is recorded as percentage
         pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
         pokemon.position = 0;
         pokemon.isActive = true;
         this.updatePokemon(battleside,pokemon);
-        battleside.active = [pokemon];
+
+        if(this.isPlayer(player)) {
+            this.state.p1.active = [pokemon];
+        } else {
+            this.state.p2.active = [pokemon];
+        }
+
 
         //Ensure that active pokemon is in slot zero
         battleside.pokemon = _.sortBy(battleside.pokemon, function(pokemon) { return pokemon == battleside.active[0] ? 0 : 1 });
@@ -152,7 +160,12 @@ var BattleRoom = new JS.Class({
             logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
         }
 
+        //update hp
         pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
+        if(!this.isPlayer(player))
+            logger.info('P2 Pokemon Health: ' + health + ' Max Health: ' + maxHealth);
+        else
+            logger.info('P1 Pokemon Health: ' + health + ' Max Health: ' + maxHealth);
         this.updatePokemon(battleside, pokemon);
 
     },
@@ -216,17 +229,29 @@ var BattleRoom = new JS.Class({
             //remove side status
         }
     },
-    updatePokemonOnStatus: function(tokens, newStatus) {
+    updatePokemonStatus: function(tokens, newStatus) {
         var tokens2 = tokens[2].split(' ');
         var player = tokens2[0];
         var pokeName = tokens2[1];
         var status = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
         if(newStatus) {
+            pokemon.setStatus(status);
             //record a new Pokemon's status
             //also keep track of how long the status has been going? relevant for toxic poison
         } else {
+            pokemon.clearStatus();
             //heal a Pokemon's status
         }
+        this.updatePokemon(battleside, pokemon);
     },
     updatePokemonOnActivate: function(tokens) {
         //activate condition such as protect (is that it?)
@@ -279,12 +304,11 @@ var BattleRoom = new JS.Class({
 
             var tokens = log[i].split('|');
             if (tokens.length > 1) {
+                logger.info(tokens[1] + ": " + tokens);
 
                 if (tokens[1] === 'tier') {
                     this.tier = tokens[2];
-                }
-
-                if (tokens[1] === 'win') {
+                } else if (tokens[1] === 'win') {
                     this.send("gg", this.id);
 
                     this.winner = tokens[2];
@@ -302,72 +326,68 @@ var BattleRoom = new JS.Class({
                         battleroom.send("/leave " + battleroom.id);
                     }, 2000);
 
-                }
-
-                // TODO: Make sure we set the opponent bokemon in the battle object
-                //Something to keep in mind always: opponent health is recorded as percent.
-                //However health is deterministic given a pokemon's species and level, so
-                //we can do a conversion to continue to use the built-in battle object.
-                if (tokens[1] === 'switch' || tokens[1] === 'drag') {
+                } else if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                     this.updatePokemonOnSwitch(tokens);
-                } else if(tokens[i] === 'faint') { //we could outright remove a pokemon...
+                } else if(tokens[1] === 'faint') { //we could outright remove a pokemon...
                     //record that pokemon has fainted
-                } else if(tokens[i] === 'detailschange') {
+                } else if(tokens[1] === 'detailschange') {
                     this.updatePokemonOnDetailsChange(tokens);
-                } else if (tokens[i] === '-damage') {
+                } else if(tokens[1] === '-damage') { //Error: not getting to here...
                     this.updatePokemonOnDamage(tokens);
-                } else if(tokens[i] === '-health') {
+                } else if(tokens[1] === '-heal') {
                     this.updatePokemonOnDamage(tokens);
-                } else if(tokens[i] === '-boost') {
+                } else if(tokens[1] === '-boost') {
                     this.updatePokemonOnBoost(tokens, true);
-                } else if(tokens[i] === '-unboost') {
+                } else if(tokens[1] === '-unboost') {
                     this.updatePokemonOnBoost(tokens, false);
-                } else if(tokens[i] === '-restoreboost') {
+                } else if(tokens[1] === '-restoreboost') {
                     this.updatePokemonRestoreBoost(tokens);
-                } else if(tokens[i] === '-start') {
+                } else if(tokens[1] === '-start') {
                     this.updatePokemonStart(tokens);
-                } else if(tokens[i] === '-fieldstart') {
+                } else if(tokens[1] === '-fieldstart') {
                     this.updateField(tokens, true);
-                } else if(tokens[i] === '-fieldend') {
+                } else if(tokens[1] === '-fieldend') {
                     this.updateField(tokens, true);
-                } else if(tokens[i] === '-weather') {
+                } else if(tokens[1] === '-weather') {
                     this.updateWeather(tokens);
-                } else if(tokens[i] === '-sidestart') {
+                } else if(tokens[1] === '-sidestart') {
                     this.updateSideCondition(tokens, true);
-                } else if(tokens[i] === '-sideend') {
+                } else if(tokens[1] === '-sideend') {
                     this.updateSideCondition(tokens, false);
-                } else if(tokens[i] === '-status') {
+                } else if(tokens[1] === '-status') {
                     this.updatePokemonStatus(tokens, true);
-                } else if(tokens[i] === '-curestatus') {
+                } else if(tokens[1] === '-curestatus') {
                     this.updatePokemonStatus(tokens, false);
-                } else if(tokens[i] === '-activate') {
+                } else if(tokens[1] === '-singleturn') {
+                    //stuff happens, generally for protect
+                } else if(tokens[1] === '-activate') {
                     this.updatePokemonOnActivate(tokens);
-                } else if(tokens[i] === '-item') {
+                } else if(tokens[1] === '-item') {
                     this.updatePokemonOnItem(tokens, true);
-                } else if(tokens[i] === '-enditem') {
+                } else if(tokens[1] === '-enditem') {
                     this.updatePokemonOnItem(tokens, false);
 
                     //We don't actually care about the rest of these effects, as they are merely visual
                 } else if (tokens[1] === 'move') {
                     //we actually don't need to record anything -- moves are mostly dealt for us
-                } else if(tokens[i] === '-supereffective') {
+                } else if(tokens[1] === '-supereffective') {
 
-                } else if(tokens[i] === '-crit') {
+                } else if(tokens[1] === '-crit') {
 
-                } else if(tokens[i] === 'c') {
+                } else if(tokens[1] === 'c') {
                     //chat message. Ignore. (or should we? haha)
-                } else if(tokens[i] === '-fail') {
+                } else if(tokens[1] === '-fail') {
 
-                } else if(tokens[i] === '-immune') {
+                } else if(tokens[1] === '-immune') {
 
-                } else if(tokens[i] === 'message') {
+                } else if(tokens[1] === 'message') {
 
-                } else if(tokens[i] === 'cant') {
+                } else if(tokens[1] === 'cant') {
 
-                } else if(tokens[i] === 'leave') {
+                } else if(tokens[1] === 'leave') {
 
-                } else if(tokens[i]) { //what if token is defined
-                    logger.info("Error: could not parse token '" + tokens[i] + "'. This needs to be implemented");
+                } else if(tokens[1]) { //what if token is defined
+                    logger.info("Error: could not parse token '" + tokens[1] + "'. This needs to be implemented");
                 }
 
             }
@@ -454,7 +474,8 @@ var BattleRoom = new JS.Class({
             var condition = pokemon.condition.split(/\/| /);
             this.state.p1.pokemon[i].hp = parseInt(condition[0]);
                 //Math.floor(parseInt(condition[0])/100*this.state.p1.pokemon[i].maxhp);
-            //TODO: add status effects
+            if(condition[2])
+                this.state.p1.pokemon[i].setStatus(condition[2]);
 
             if (pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];
