@@ -127,8 +127,10 @@ var BattleRoom = new JS.Class({
         this.updatePokemon(battleside,pokemon);
 
         if(this.isPlayer(player)) {
+            this.state.p1.active[0].isActive = false;
             this.state.p1.active = [pokemon];
         } else {
+            this.state.p2.active[0].isActive = false;
             this.state.p2.active = [pokemon];
         }
 

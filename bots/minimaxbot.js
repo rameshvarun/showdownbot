@@ -65,9 +65,16 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 		state : battle.toString()
 	}
 
+	// Look for win / loss
+
 	if(depth == 0) {
 		node.value = eval(battle);
 	} else {
+		// If the request is a wait request, the opposing player has to take a turn. Don't decrement depth.
+		if(battle.p1.request.wait) {
+			return opponentTurn(battle, depth, alpha, beta, null);
+		}
+
 		var choices = (givenchoices) ? givenchoices : BattleRoom.parseRequest(battle.p1.request).choices;
 		//choices = _.sample(choices, 1); // For testing
                 //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
@@ -110,6 +117,14 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		state: battle.toString()
 	}
 
+	// If the request is a wait request, only the player chooses an action. Don't decrement depth
+	if(battle.p2.request.wait) {
+		var newbattle = clone(battle);
+		newbattle.p2.decision = true;
+		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+		return playerTurn(newbattle, depth, alpha, beta);
+	}
+
 	var choices = BattleRoom.parseRequest(battle.p2.request).choices;
 
 	// Make sure we can't switch to an unown
@@ -118,12 +133,21 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		return false;
 	});
 
+	// We don't have enough info to simulate the battle anymore
+	if(choices.length == 0) {
+		node.value = eval(battle);
+		return node;
+	}
+
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = clone(battle); //it appears that the clone is still failing to completely replicate state
+		var newbattle = clone(battle);
 
 		// Register action, let battle simulate
-		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+		if(playerAction)
+			newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+		else
+			newbattle.p1.decision = true;
 		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i]), newbattle.rqid);
                 logger.info("Player action: " + BattleRoom.toChoiceString(playerAction));
                 logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i]));
@@ -146,6 +170,10 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 			beta = Math.min(beta, maxNode.value);
 			if(beta <= alpha) break;
 		}
+
+		// Hopefully prompt garbage collection, so we don't maintain too many battle object
+		delete newbattle;
+		if(global.gc) global.gc()
 	}
 
 	node.choices = choices;

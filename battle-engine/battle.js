@@ -2551,6 +2551,13 @@ Battle = (function () {
 		return text;
 	    }
 
+		function requestType(request) {
+			if(request.wait) return "Wait";
+			if(request.active) return "Any Move";
+			if(request.forceSwitch) return "Force Switch";
+			return "Unkown Type";
+		}
+
 	    var data = ''
 	    data += 'Turn: ' + this.turn + "\n";
 	    data += "\n";
@@ -2560,6 +2567,7 @@ Battle = (function () {
 	    data += "\n";
 
 	    data += this.p1.name + "\n";
+		data += "\tRequest Type: " + requestType(this.p1.request) + "\n";
 	    data += "\tactive:" + formatPokemon(this.p1.active[0]) + "\n";
             data += "\tAll Pokemon:\n";
             for(var i = 0; i < this.p1.pokemon.length; i++) {
@@ -2570,6 +2578,7 @@ Battle = (function () {
 	    data += "\n";
 
 	    data += this.p2.name + "\n";
+		data += "\tRequest Type: " + requestType(this.p2.request) + "\n";
 	    data += "\tactive:" + formatPokemon(this.p2.active[0]) + "\n";
             data += "\tAll Pokemon:\n";
             for(var i = 0; i < this.p2.pokemon.length; i++) {
