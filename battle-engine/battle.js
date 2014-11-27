@@ -2539,82 +2539,46 @@ Battle = (function () {
 	};
 
 	Battle.prototype.toString = function () {
-		// TODO: Need better toString function to understand battle
+	    // TODO: Need better toString function to understand battle
 
-		function formatPokemon(pokemon) {
-			var text = "";
-			text += pokemon.name + " " + pokemon.getHealth() + " Volitiles: " + JSON.stringify(_.keys(pokemon.volatiles));
-			text += " Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
-				return value != 0;
-			}));
-			return text;
-		}
+	    function formatPokemon(pokemon) {
+		    var text = "";
+		text += pokemon.name + " " + pokemon.getHealth() + " Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
+		text += " Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
+		    return value != 0;
+		}));
+		return text;
+	    }
 
-		var data = ''
-		data += 'Turn: ' + this.turn + "\n";
-		data += "\n";
+	    var data = ''
+	    data += 'Turn: ' + this.turn + "\n";
+	    data += "\n";
 
-		data += "Weather: " + (this.getWeather().id === "" ? "None" : this.getWeather().name) + "\n";
-		data += "PsuedoWeathers: " + JSON.stringify(_.keys(this.pseudoWeather)) + "\n";
-		data += "\n";
+	    data += "Weather: " + (this.getWeather().id === "" ? "None" : this.getWeather().name) + "\n";
+	    data += "PsuedoWeathers: " + JSON.stringify(_.keys(this.pseudoWeather)) + "\n";
+	    data += "\n";
 
-		data += this.p1.name + "\n";
-		data += "\tactive:" + formatPokemon(this.p1.active[0]) + "\n";
-		data += "\tside conditions:" + JSON.stringify(_.keys(this.p1.sideConditions)) + "\n";
-		data += "\n";
+	    data += this.p1.name + "\n";
+	    data += "\tactive:" + formatPokemon(this.p1.active[0]) + "\n";
+            data += "\tAll Pokemon:\n";
+            for(var i = 0; i < this.p1.pokemon.length; i++) {
+                data += "\t\t" + formatPokemon(this.p1.pokemon[i]) + "\n";
+            }
 
-		data += this.p2.name + "\n";
-		data += "\tactive:" + formatPokemon(this.p2.active[0]) + "\n";
-		data += "\tside conditions:" + JSON.stringify(_.keys(this.p2.sideConditions)) + "\n";
-		data += "\n";
-		return data;
+	    data += "\tside conditions:" + JSON.stringify(_.keys(this.p1.sideConditions)) + "\n";
+	    data += "\n";
+
+	    data += this.p2.name + "\n";
+	    data += "\tactive:" + formatPokemon(this.p2.active[0]) + "\n";
+            data += "\tAll Pokemon:\n";
+            for(var i = 0; i < this.p2.pokemon.length; i++) {
+                data += "\t\t" + formatPokemon(this.p2.pokemon[i]) + "\n";
+            }
+
+	    data += "\tside conditions:" + JSON.stringify(_.keys(this.p2.sideConditions)) + "\n";
+	    data += "\n";
+	    return data;
 	};
-
-	//Manually clones a battle object.
-	Battle.prototype.clone = function() {
-		// TODO: Needs a ton of work
-		//return clone(this);
-
-	        var newBattle = Battle.construct(this.roomid, 'base', false);
-		newBattle.join('p1', 'botPlayer');
-		newBattle.join('p2', 'humanPlayer');
-
-		//collect pokemon data
-		newBattle.p1.pokemon = [];
-		for(var i in this.p1.pokemon) {
-			var newPokemon = this.p1.pokemon[i].clone(newBattle.p1);
-
-			if(this.p1.active[0] === this.p1.pokemon[i]) {
-				newPokemon.isActive = true;
-				newBattle.p1.active = [newPokemon];
-			}
-
-   		    newBattle.p1.pokemon.push(newPokemon);
-		}
-
-
-		newBattle.p2.pokemon = [];
-		for(var i in this.p2.pokemon) {
-			var newPokemon = this.p2.pokemon[i].clone(newBattle.p2);
-
-			if(this.p2.active[0] === this.p2.pokemon[i]) {
-				newPokemon.isActive = true;
-				newBattle.p2.active = [newPokemon];
-			}
-
-			newBattle.p2.pokemon.push(newPokemon);
-		}
-
-		// Make sure active pokemon are up front in list
-		newBattle.p1.pokemon = _.sortBy(newBattle.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
-		newBattle.p2.pokemon = _.sortBy(newBattle.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
-
-		logger.trace("Finished cloning battle");
-
-		newBattle.start();
-		return newBattle;
-	};
-
 
 	return Battle;
 })();

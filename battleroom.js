@@ -92,7 +92,7 @@ var BattleRoom = new JS.Class({
     // TODO: Understand more about the opposing pokemon
     updatePokemonOnSwitch: function(tokens) {
         var tokens2 = tokens[2].split(' ');
-        var tokens4 = tokens[4].split('/');
+        var tokens4 = tokens[4].split(/\/| /); //for health
 
         var player = tokens2[0];
         var pokeName = tokens2[1];
@@ -104,34 +104,28 @@ var BattleRoom = new JS.Class({
         if (this.isPlayer(player)) {
             logger.info("Our pokemon has switched! " + tokens[2]);
             battleside = this.state.p1;
-            var pokemon = this.getPokemon(battleside, pokeName);
         } else {
-            logger.info("Oppnents pokemon has switched! " + tokens[2]);
+            logger.info("Opponents pokemon has switched! " + tokens[2]);
             battleside = this.state.p2;
-            this.oppPokemon = this.getPokemon(battleside, pokeName);
-            if(!this.oppPokemon) { //pokemon has not been defined yet, so choose one of the unowns
-                //note: this will not quite work if the pokemon is actually unown
-                this.oppPokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
-                var set = this.state.getTemplate(pokeName);
-                set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
-                this.oppPokemon = new BattlePokemon(set, this.state.p2);
-            }
-            /*
+        }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(!pokemon) { //pokemon has not been defined yet, so choose one of the unowns
+            //note: this will not quite work if the pokemon is actually unown
+            pokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
             var set = this.state.getTemplate(pokeName);
             set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
-            //set.moves = set.randomBattleMoves;
-            this.oppPokemon = new BattlePokemon(set, this.state.p2);
-            */
-            this.oppPokemon.position = 0;
-            this.oppPokemon.isActive = true;
-            this.updatePokemon(this.state.p2, this.oppPokemon);
-            this.state.p2.active = [this.oppPokemon];
-
-            // Ensure that active pokemon is in the first slot
-            this.state.p2.pokemon = _.sortBy(this.state.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
-
-            logger.info("Opponent Switches To: " + this.oppPokemon.name);
+            pokemon = new BattlePokemon(set, this.state.p2);
         }
+        //opponent hp is recorded as percentage
+        pokemon.hp = health / maxHealth * pokemon.maxhp;
+        pokemon.position = 0;
+        pokemon.isActive = true;
+        this.updatePokemon(battleside,pokemon);
+        battleside.active = [pokemon];
+
+        //Ensure that active pokemon is in slot zero
+        battleside.pokemon = _.sortBy(battleside.pokemon, function(pokemon) { return pokemon == battleside.active[0] ? 0 : 1 });
     },
     updatePokemonOnDamage: function(tokens) {
         //extract damage dealt to a particular pokemon
@@ -352,6 +346,8 @@ var BattleRoom = new JS.Class({
                 } else if(tokens[i] === 'message') {
 
                 } else if(tokens[i] === 'cant') {
+
+                } else if(tokens[i] === 'leave') {
 
                 } else if(tokens[i]) { //what if token is defined
                     logger.info("Error: could not parse token '" + tokens[i] + "'. This needs to be implemented");
