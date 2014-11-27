@@ -10,7 +10,7 @@ var randombot = require("./randombot");
 
 var clone = require("clone");
 
-//TODO: Features should not take into account Unown pokemon.
+//TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
 	features = {};
 
@@ -24,6 +24,7 @@ function getFeatures(battle) {
 	return features;
 }
 
+//TODO: Eval function needs to be made 1000x better
 function eval(battle) {
 	var features = getFeatures(battle);
 	var value = features.mySum - features.theirSum;
@@ -33,6 +34,7 @@ function eval(battle) {
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
+<<<<<<< HEAD
 
 	var MAX_DEPTH = 2;
 	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
@@ -44,8 +46,23 @@ var decide = module.exports.decide = function(battle, choices) {
 		id: maxNode.action.id,
 		tree: maxNode
 	};
+=======
+    var MAX_DEPTH = 2;
+    var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
+    if(!maxNode.action) return randombot.decide(battle, choices);
+    logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
+    if(overallMinNode.action)
+        logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
+    return {
+	type: maxNode.action.type,
+	id: maxNode.action.id,
+	tree: maxNode
+    };
+>>>>>>> 4a1e1538c2efbbb67d27be309c6b9994e181841b
 }
 
+//TODO: Implement move ordering, which can be based on the original greedy algorithm
+//However, it should have slightly different priorities, such as status effects...
 function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	logger.trace("Player turn at depth " + depth);
 
@@ -65,6 +82,9 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	} else {
 		var choices = (givenchoices) ? givenchoices : BattleRoom.parseRequest(battle.p1.request).choices;
 		//choices = _.sample(choices, 1); // For testing
+                //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
+                //Essentially, the greedy algorithm
+                //Perhaps then we can increase the depth...
 
 		for(var i = 0; i < choices.length; ++i) {
 			// Try action
@@ -75,9 +95,9 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 				if(minNode.value > node.value) {
 					node.value = minNode.value;
 					node.action = choices[i];
+                                        overallMinNode = minNode;
 				}
 				alpha = Math.max(alpha, minNode.value);
-                                overallMinNode = minNode;
 				if(beta <= alpha) break;
 			}
 		}
