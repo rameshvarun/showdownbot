@@ -77,36 +77,66 @@ var BattleRoom = new JS.Class({
         }
         return undefined; //otherwise Pokemon does not exist
     },
+    //given a player and a pokemon, updates that pokemon in the battleside object
+    updatePokemon: function(battleside, pokemon) {
+        for(var i = 0; i < battleside.pokemon.length; i++) {
+            if(battleside.pokemon[i].name === pokemon.name) {
+                battleside.pokemon[i] = pokemon;
+                return;
+            }
+        }
+        logger.info("Could not find " + pokemon.name + " in the battle side, creating new Pokemon.");
+        for(var i = battleside.pokemon.length - 1; i >= 0; i--) {
+            if(battleside.pokemon[i].name === "Unown") {
+                battleside.pokemon[i] = pokemon;
+                return;
+            }
+        }
+    },
+
+    //returns true if the player object is us
+    isPlayer: function(player) {
+        return player === this.side + 'a:';
+    },
     // TODO: Understand more about the opposing pokemon
     updatePokemonOnSwitch: function(tokens) {
         var tokens2 = tokens[2].split(' ');
         var tokens4 = tokens[4].split('/');
+
         var player = tokens2[0];
         var pokeName = tokens2[1];
         var health = tokens4[0];
         var maxHealth = tokens4[1];
-        var battleside = undefined;
-        var pokemon = undefined;
 
-        if (player === this.oppSide + 'a:') {
+        var battleside = undefined;
+
+        if (this.isPlayer(player)) {
+            logger.info("Our pokemon has switched! " + tokens[2]);
+            battleside = this.state.p1;
+            var pokemon = this.getPokemon(battleside, pokeName);
+        } else {
             logger.info("Oppnents pokemon has switched! " + tokens[2]);
             battleside = this.state.p2;
-            pokemon = this.getPokemon(battleside, pokeName);
-
+            this.oppPokemon = this.getPokemon(battleside, pokeName);
+            if(!this.oppPokemon) { //pokemon has not been defined yet, so choose one of the unowns
+                //note: this will not quite work if the pokemon is actually unown
+                this.oppPokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
+                var set = this.state.getTemplate(pokeName);
+                set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
+                this.oppPokemon = new BattlePokemon(set, this.state.p2);
+            }
+            /*
             var set = this.state.getTemplate(pokeName);
             set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
             //set.moves = set.randomBattleMoves;
-
             this.oppPokemon = new BattlePokemon(set, this.state.p2);
+            */
             this.oppPokemon.position = 0;
             this.oppPokemon.isActive = true;
-            this.state.p2.pokemon[0] = this.oppPokemon;
+            this.updatePokemon(this.state.p2, this.oppPokemon);
             this.state.p2.active = [this.oppPokemon];
 
             logger.info("Opponent Switches To: " + this.oppPokemon.name);
-        } else {
-            battleside = this.state.p1;
-            pokemon = this.getPokemon(battleside, pokeName);
         }
     },
     updatePokemonOnDamage: function(tokens) {
@@ -176,6 +206,7 @@ var BattleRoom = new JS.Class({
         var sideStatus = tokens[3].substring(6);
         if(newSide) {
             //add side status
+            //Note: can have multiple layers of toxic spikes or spikes
         } else {
             //remove side status
         }
