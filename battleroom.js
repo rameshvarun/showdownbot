@@ -107,9 +107,14 @@ var BattleRoom = new JS.Class({
         if (this.isPlayer(player)) {
             logger.info("Our pokemon has switched! " + tokens[2]);
             battleside = this.state.p1;
+            //remove boosts for current pokemon
+            //TODO: remove volatile status
+            this.state.p1.active[0].boosts = {};
         } else {
             logger.info("Opponents pokemon has switched! " + tokens[2]);
             battleside = this.state.p2;
+            //remove boosts for current pokemon
+            this.state.p2.active[0].boosts = {};
         }
         var pokemon = this.getPokemon(battleside, pokeName);
 
@@ -158,6 +163,7 @@ var BattleRoom = new JS.Class({
         var pokemon = this.getPokemon(battleside, pokeName);
         if(!pokemon) {
             logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
         }
 
         //update hp
@@ -175,11 +181,55 @@ var BattleRoom = new JS.Class({
         var boostCount = parseInt(tokens[4]);
         var player = tokens2[0];
         var pokeName = tokens2[1];
-        if(isBoost) {
-            //record the positive boost
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
         } else {
-            //record the negative boost
+            battleside = this.state.p2;
         }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        if(isBoost) {
+            if(stat in pokemon.boosts)
+                pokemon.boosts[stat] += boostCount;
+            else
+                pokemon.boosts[stat] = boostCount;
+        } else {
+            if(stat in pokemon.boosts)
+                pokemon.boosts[stat] -= boostCount;
+            else
+                pokemon.boosts[stat] = -boostCount;
+        }
+        this.updatePokemon(battleside, pokemon);
+    },
+    updatePokemonSetBoost: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var stat = tokens[3];
+        var boostCount = parseInt(tokens[4]);
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        pokemon.boosts[stat] = boostCount;
+        this.updatePokemon(battleside, pokemon);
     },
     updatePokemonRestoreBoost: function(tokens) {
         var tokens2 = tokens[2].split(' ');
@@ -247,6 +297,7 @@ var BattleRoom = new JS.Class({
             pokemon.setStatus(status);
             //record a new Pokemon's status
             //also keep track of how long the status has been going? relevant for toxic poison
+            //actually, might be done by default
         } else {
             pokemon.clearStatus();
             //heal a Pokemon's status
@@ -340,6 +391,8 @@ var BattleRoom = new JS.Class({
                     this.updatePokemonOnBoost(tokens, true);
                 } else if(tokens[1] === '-unboost') {
                     this.updatePokemonOnBoost(tokens, false);
+                } else if(tokens[1] === '-setboost') {
+                    this.updatePokemonSetBoost(tokens);
                 } else if(tokens[1] === '-restoreboost') {
                     this.updatePokemonRestoreBoost(tokens);
                 } else if(tokens[1] === '-start') {
@@ -366,6 +419,8 @@ var BattleRoom = new JS.Class({
                     this.updatePokemonOnItem(tokens, true);
                 } else if(tokens[1] === '-enditem') {
                     this.updatePokemonOnItem(tokens, false);
+                } else if(tokens[1] === '-ability') {
+                    //relatively situational -- important for mold breaker/teravolt, etc.
 
                     //We don't actually care about the rest of these effects, as they are merely visual
                 } else if (tokens[1] === 'move') {
@@ -403,7 +458,7 @@ var BattleRoom = new JS.Class({
             "decisions": JSON.stringify(this.decisions),
             "log": this.log,
             "tier": this.tier
-        }
+        };
         db.insert(game, function(err, newDoc) {
             logger.info("Saved result of " + newDoc.title + " to database.");
         });
@@ -423,9 +478,9 @@ var BattleRoom = new JS.Class({
     },
 
     //note: we should not be recreating pokemon each time
+    //is this redundant?
     updateSide: function(sideData) {
         if (!sideData || !sideData.id) return;
-
         logger.info("Starting to update my side data.");
         for (var i = 0; i < sideData.pokemon.length; ++i) {
             var pokemon = sideData.pokemon[i];
@@ -461,6 +516,9 @@ var BattleRoom = new JS.Class({
                 shiny: false
             };
 
+            //keep track of old pokemon
+            var oldPokemon = this.state.p1.pokemon[i];
+
             // Initialize pokemon
             this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
             this.state.p1.pokemon[i].position = i;
@@ -469,13 +527,16 @@ var BattleRoom = new JS.Class({
             for (var stat in pokemon.stats) {
                 this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
             }
-
             // Update health/status effects, if any
             var condition = pokemon.condition.split(/\/| /);
             this.state.p1.pokemon[i].hp = parseInt(condition[0]);
-                //Math.floor(parseInt(condition[0])/100*this.state.p1.pokemon[i].maxhp);
-            if(condition[2])
-                this.state.p1.pokemon[i].setStatus(condition[2]);
+            if(condition.length > 2) {//add status condition
+                this.state.p1.pokemon[i].setStatus(condition[2]); //necessary?
+                logger.info("WE'VE GOT A STATUS CONDITION UP HERE!");
+            }
+
+            // Keep old boosts
+            this.state.p1.pokemon[i].boosts = oldPokemon.boosts;
 
             if (pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];
