@@ -34,19 +34,6 @@ function eval(battle) {
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
-<<<<<<< HEAD
-
-	var MAX_DEPTH = 2;
-	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
-	if(!maxNode.action) return randombot.decide(battle, choices);
-        logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
-        if(overallMinNode.action) logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
-	return {
-		type: maxNode.action.type,
-		id: maxNode.action.id,
-		tree: maxNode
-	};
-=======
     var MAX_DEPTH = 2;
     var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
     if(!maxNode.action) return randombot.decide(battle, choices);
@@ -58,7 +45,6 @@ var decide = module.exports.decide = function(battle, choices) {
 	id: maxNode.action.id,
 	tree: maxNode
     };
->>>>>>> 4a1e1538c2efbbb67d27be309c6b9994e181841b
 }
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
