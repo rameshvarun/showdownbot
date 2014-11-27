@@ -472,6 +472,7 @@ var BattleRoom = new JS.Class({
             var choices = [];
 
             if(!request) return choices; // Empty request
+            if(request.wait) return choices; // This player is not supposed to make a move
 
             // If we can make a move
             if (request.active) {
