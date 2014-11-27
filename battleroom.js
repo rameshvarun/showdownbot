@@ -40,6 +40,7 @@ var BattleRoom = new JS.Class({
         this.state = Battle.construct(id, 'base', false);
         this.state.join('p1', 'botPlayer');
         this.state.join('p2', 'humanPlayer');
+        this.state.reportPercentages = true;
 
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
@@ -118,7 +119,7 @@ var BattleRoom = new JS.Class({
             pokemon = new BattlePokemon(set, this.state.p2);
         }
         //opponent hp is recorded as percentage
-        pokemon.hp = health / maxHealth * pokemon.maxhp;
+        pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
         pokemon.position = 0;
         pokemon.isActive = true;
         this.updatePokemon(battleside,pokemon);
@@ -133,11 +134,27 @@ var BattleRoom = new JS.Class({
         //note that opponent health is recorded as percent. Keep this in mind
 
         var tokens2 = tokens[2].split(' ');
-        var tokens3 = tokens[3].split('/');
+        var tokens3 = tokens[3].split(/\/| /);
         var player = tokens2[0];
         var pokeName = tokens2[1];
         var health = tokens3[0];
         var maxHealth = tokens3[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+        }
+
+        pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
+        this.updatePokemon(battleside, pokemon);
+
     },
     updatePokemonOnBoost: function(tokens, isBoost) {
         var tokens2 = tokens[2].split(' ');
@@ -189,7 +206,7 @@ var BattleRoom = new JS.Class({
             //we might want to keep track of how long the weather has been lasting...
         }
     },
-    updateSide: function(tokens, newSide) {
+    updateSideCondition: function(tokens, newSide) {
         var player = tokens[2].split(' ')[0];
         var sideStatus = tokens[3].substring(6);
         if(newSide) {
@@ -316,9 +333,9 @@ var BattleRoom = new JS.Class({
                 } else if(tokens[i] === '-weather') {
                     this.updateWeather(tokens);
                 } else if(tokens[i] === '-sidestart') {
-                    this.updateSide(tokens, true);
+                    this.updateSideCondition(tokens, true);
                 } else if(tokens[i] === '-sideend') {
-                    this.updateSide(tokens, false);
+                    this.updateSideCondition(tokens, false);
                 } else if(tokens[i] === '-status') {
                     this.updatePokemonStatus(tokens, true);
                 } else if(tokens[i] === '-curestatus') {
@@ -432,6 +449,12 @@ var BattleRoom = new JS.Class({
             for (var stat in pokemon.stats) {
                 this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
             }
+
+            // Update health/status effects, if any
+            var condition = pokemon.condition.split(/\/| /);
+            this.state.p1.pokemon[i].hp = parseInt(condition[0]);
+                //Math.floor(parseInt(condition[0])/100*this.state.p1.pokemon[i].maxhp);
+            //TODO: add status effects
 
             if (pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];

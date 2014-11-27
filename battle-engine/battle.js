@@ -2542,8 +2542,9 @@ Battle = (function () {
 	    // TODO: Need better toString function to understand battle
 
 	    function formatPokemon(pokemon) {
-		    var text = "";
+		var text = "";
 		text += pokemon.name + " " + pokemon.hp + "/" + pokemon.maxhp + " Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
+
 		text += " Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
 		    return value != 0;
 		}));
