@@ -8,6 +8,8 @@ var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
 
+var clone = require("clone");
+
 //TODO: Features should not take into account Unown pokemon.
 function getFeatures(battle) {
 	features = {};
@@ -31,11 +33,12 @@ function eval(battle) {
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
+
 	var MAX_DEPTH = 2;
 	var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
 	if(!maxNode.action) return randombot.decide(battle, choices);
         logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
-        logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
+        if(overallMinNode.action) logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
 	return {
 		type: maxNode.action.type,
 		id: maxNode.action.id,
@@ -109,7 +112,7 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battle.clone(); //it appears that the clone is still failing to completely replicate state
+		var newbattle = clone(battle); //it appears that the clone is still failing to completely replicate state
 
 		// Register action, let battle simulate
 		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
