@@ -28,6 +28,8 @@ var Items = require("./data/items").BattleItems;
 
 var _ = require("underscore");
 
+var clone = require("clone");
+
 var BattleRoom = new JS.Class({
     initialize: function(id, sendfunc) {
         this.id = id;
@@ -38,7 +40,6 @@ var BattleRoom = new JS.Class({
         this.state = Battle.construct(id, 'base', false);
         this.state.join('p1', 'botPlayer');
         this.state.join('p2', 'humanPlayer');
-        this.state.start();
 
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
@@ -125,6 +126,9 @@ var BattleRoom = new JS.Class({
             this.oppPokemon.isActive = true;
             this.updatePokemon(this.state.p2, this.oppPokemon);
             this.state.p2.active = [this.oppPokemon];
+
+            // Ensure that active pokemon is in the first slot
+            this.state.p2.pokemon = _.sortBy(this.state.p2.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
 
             logger.info("Opponent Switches To: " + this.oppPokemon.name);
         }
@@ -441,6 +445,9 @@ var BattleRoom = new JS.Class({
             // TODO(rameshvarun): Somehow parse / load in current hp and status conditions
         }
 
+        // Enforce that the active pokemon is in the first slot
+        this.state.p1.pokemon = _.sortBy(this.state.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+
         this.side = sideData.id;
         this.oppSide = (this.side === "p1") ? "p2" : "p1";
         logger.info(this.title + ": My current side is " + this.side);
@@ -451,7 +458,7 @@ var BattleRoom = new JS.Class({
         setTimeout(function() {
             var decision = BattleRoom.parseRequest(request);
 
-            var result = minimaxbot.decide(room.state.clone(), decision.choices);
+            var result = minimaxbot.decide(clone(room.state), decision.choices);
             room.decisions.push(result);
             room.send("/choose " + BattleRoom.toChoiceString(result) + "|" + decision.rqid, room.id);
         }, 2000);

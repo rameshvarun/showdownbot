@@ -34,6 +34,8 @@ function eval(battle) {
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
+	battle.start();
+
     var MAX_DEPTH = 2;
     var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
     if(!maxNode.action) return randombot.decide(battle, choices);
