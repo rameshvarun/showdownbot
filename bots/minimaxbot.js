@@ -8,6 +8,8 @@ var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
 
+var clone = require("clone");
+
 //TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
 	features = {};
@@ -116,7 +118,7 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");
-		var newbattle = battle.clone(); //it appears that the clone is still failing to completely replicate state
+		var newbattle = clone(battle); //it appears that the clone is still failing to completely replicate state
 
 		// Register action, let battle simulate
 		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);

@@ -40,16 +40,6 @@ var BattleRoom = new JS.Class({
         this.state.join('p2', 'humanPlayer');
         this.state.start();
 
-        // Our current belief of the state of the battle
-        this.belief = {
-            myside : {
-                pokemon : []
-            },
-            theirside: {
-                pokemon : []
-            }
-        }
-
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
             sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
@@ -473,6 +463,8 @@ var BattleRoom = new JS.Class({
         },
         parseRequest: function(request) {
             var choices = [];
+
+            if(!request) return choices; // Empty request
 
             // If we can make a move
             if (request.active) {
