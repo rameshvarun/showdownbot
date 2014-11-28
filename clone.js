@@ -109,7 +109,7 @@ function clone(parent, circular, depth, prototype) {
     }
 
     for (var i in parent) {
-      child[i] = _clone(parent[i], depth - 1);
+      if(parent.hasOwnProperty(i)) child[i] = _clone(parent[i], depth - 1);
     }
 
     return child;
