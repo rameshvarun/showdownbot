@@ -64,9 +64,10 @@ var BattleRoom = new JS.Class({
         }
     },
     //given a player and a pokemon, returns the corresponding pokemon object
-    getPokemon: function(battleside, pokename) {
+    getPokemon: function(battleside, pokename, temp) {
         for(var i = 0; i < battleside.pokemon.length; i++) {
-            if(battleside.pokemon[i].name === pokename)
+            if(battleside.pokemon[i].name === pokename || //for mega pokemon
+               battleside.pokemon[i].name.substr(0,pokename.length) === pokename)
                 return battleside.pokemon[i];
         }
         return undefined; //otherwise Pokemon does not exist
@@ -286,6 +287,7 @@ var BattleRoom = new JS.Class({
         } else {
             pokemon.removeVolatile(status);
         }
+        this.updatePokemon(battleside, pokemon);
     },
     updateField: function(tokens, newField) {
         //as far as I know, only applies to trick room, which is a pseudo-weather
@@ -390,9 +392,9 @@ var BattleRoom = new JS.Class({
         } else {
             battleside = this.state.p2;
         }
-        //Note: past issue where we crashed on first turn. Might happen?
+        //Note: crashes when the bot mega evolves.
         logger.info(pokeName + " has transformed into " + newPokeName + "!");
-        var pokemon = this.getPokemon(battleside, pokeName);
+        var pokemon = this.getPokemon(battleside, pokeName, true);
 
         //apply forme change
         pokemon.formeChange(newPokeName);
