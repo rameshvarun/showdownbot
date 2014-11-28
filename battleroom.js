@@ -610,14 +610,17 @@ var BattleRoom = new JS.Class({
 
             var result = minimaxbot.decide(clone(room.state), decision.choices);
             room.decisions.push(result);
-            room.send("/choose " + BattleRoom.toChoiceString(result) + "|" + decision.rqid, room.id);
+            room.send("/choose " + BattleRoom.toChoiceString(result, room.state.p1) + "|" + decision.rqid, room.id);
         }, 2000);
     },
     // Static class methods
     extend: {
-        toChoiceString: function(choice) {
+        toChoiceString: function(choice, battleside) {
             if (choice.type == "move") {
-                return "move " + choice.id;
+                if(battleside && battleside.active[0].canMegaEvo) //mega evolve if possible
+                    return "move " + choice.id + " mega";
+                else
+                    return "move " + choice.id;
             } else if (choice.type == "switch") {
                 return "switch " + (choice.id + 1);
             }

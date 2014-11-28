@@ -69,7 +69,7 @@ function eval(battle) {
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
-	battle.start();
+    battle.start();
 
     var MAX_DEPTH = 1; //for now...
     var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
@@ -111,25 +111,25 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 		}
 
 		var choices = (givenchoices) ? givenchoices : BattleRoom.parseRequest(battle.p1.request).choices;
-		//choices = _.sample(choices, 1); // For testing
+	        //choices = _.sample(choices, 1); // For testing
                 //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
                 //Essentially, the greedy algorithm
                 //Perhaps then we can increase the depth...
 
 		for(var i = 0; i < choices.length; ++i) {
-			// Try action
-			var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
-			node.children.push(minNode);
+		    // Try action
+		    var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
+		    node.children.push(minNode);
 
-			if(minNode.value != null) {
-				if(minNode.value > node.value) {
-					node.value = minNode.value;
-					node.action = choices[i];
-                                        overallMinNode = minNode;
-				}
-				alpha = Math.max(alpha, minNode.value);
-				if(beta <= alpha) break;
+		    if(minNode.value != null) {
+			if(minNode.value > node.value) {
+			    node.value = minNode.value;
+			    node.action = choices[i];
+                            overallMinNode = minNode;
 			}
+			alpha = Math.max(alpha, minNode.value);
+			if(beta <= alpha) break;
+		    }
 		}
 
 		node.choices = choices;
@@ -156,7 +156,7 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 	if(battle.p2.request.wait) {
 		var newbattle = clone(battle);
 		newbattle.p2.decision = true;
-		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p2), newbattle.rqid);
 		return playerTurn(newbattle, depth, alpha, beta);
 	}
 
@@ -180,12 +180,12 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 		// Register action, let battle simulate
 		if(playerAction)
-			newbattle.choose('p1', BattleRoom.toChoiceString(playerAction), newbattle.rqid);
+			newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p1), newbattle.rqid);
 		else
 			newbattle.p1.decision = true;
-		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i]), newbattle.rqid);
-                logger.info("Player action: " + BattleRoom.toChoiceString(playerAction));
-                logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i]));
+		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i], newbattle.p2), newbattle.rqid);
+                logger.info("Player action: " + BattleRoom.toChoiceString(playerAction, newbattle.p1));
+                logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i], newbattle.p2));
                 logger.info("My Resulting Health:");
                 for(var j = 0; j < newbattle.p1.pokemon.length; j++) {
                     logger.info(newbattle.p1.pokemon[j].id + ": " + newbattle.p1.pokemon[j].hp + "/" + newbattle.p1.pokemon[j].maxhp);
