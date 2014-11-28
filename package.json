@@ -2,7 +2,6 @@
   "name": "showdownbot",
   "description": "AI bot for playing Pokemon Showdown.",
   "dependencies": {
-    "clone": "rameshvarun/node-clone",
     "commander": "2.x",
     "express": "^4.10.0",
     "jsclass": "4.x",

@@ -15,7 +15,7 @@ require('sugar');
 require('./globals');
 
 // Circular, recursive clone
-var clone = require("clone");
+var clone = require("./../clone");
 
 var _ = require("underscore");
 

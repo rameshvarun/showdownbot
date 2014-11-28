@@ -28,7 +28,7 @@ var Items = require("./data/items").BattleItems;
 
 var _ = require("underscore");
 
-var clone = require("clone");
+var clone = require("./clone");
 
 var BattleRoom = new JS.Class({
     initialize: function(id, sendfunc) {

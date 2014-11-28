@@ -8,7 +8,7 @@ var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
 
-var clone = require("clone");
+var clone = require("./../clone");
 
 //TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
