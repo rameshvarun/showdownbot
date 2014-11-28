@@ -156,7 +156,7 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 	if(battle.p2.request.wait) {
 		var newbattle = clone(battle);
 		newbattle.p2.decision = true;
-		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p2), newbattle.rqid);
+		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p1), newbattle.rqid);
 		return playerTurn(newbattle, depth, alpha, beta);
 	}
 

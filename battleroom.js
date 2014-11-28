@@ -108,13 +108,14 @@ var BattleRoom = new JS.Class({
             logger.info("Our pokemon has switched! " + tokens[2]);
             battleside = this.state.p1;
             //remove boosts for current pokemon
-            //TODO: remove volatile status
             this.state.p1.active[0].boosts = {};
+            this.state.p1.active[0].volatiles = {};
         } else {
             logger.info("Opponents pokemon has switched! " + tokens[2]);
             battleside = this.state.p2;
             //remove boosts for current pokemon
             this.state.p2.active[0].boosts = {};
+            this.state.p2.active[0].volatiles = {};
         }
         var pokemon = this.getPokemon(battleside, pokeName);
 
@@ -375,16 +376,49 @@ var BattleRoom = new JS.Class({
         this.updatePokemon(battleside, pokemon);
     },
 
-    //this is going to be very compilcated. There should only be three main cases:
-    //-mega evolution. Important if ability change/type change
-    //-ditto. Important to check moveset.
-    //-zoroark. Also important to check moveset.
-    updatePokemonOnDetailsChange: function(tokens) {
+    //Apply mega evolution effects, or aegislash/meloetta
+    updatePokemonOnFormeChange: function(tokens) {
         var tokens2 = tokens[2].split(' ');
         var tokens3 = tokens[3].split(', ');
         var player = tokens2[0];
         var pokeName = tokens2[1];
         var newPokeName = tokens3[0];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+        //Note: past issue where we crashed on first turn. Might happen?
+        logger.info(pokeName + " has transformed into " + newPokeName + "!");
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        //apply forme change
+        pokemon.formeChange(newPokeName);
+        this.updatePokemon(battleside, pokemon);
+    },
+    //for ditto exclusively
+    updatePokemonOnTransform: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var tokens3 = tokens[3].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var newPokeName = tokens3[1];
+        var battleside = undefined;
+        var pokemon = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+            pokemon = this.getPokemon(battleside, pokeName);
+            pokemon.transformInto(this.state.p2.active[0]);
+        } else {
+            battleside = this.state.p2;
+            pokemon = this.getPokemon(battleside, pokeName);
+            pokemon.transformInto(this.state.p1.active[0]);
+        }
+        this.updatePokemon(battleside, pokemon);
+
     },
     recieve: function(data) {
         if (!data) return;
@@ -429,8 +463,10 @@ var BattleRoom = new JS.Class({
                     this.updatePokemonOnSwitch(tokens);
                 } else if(tokens[1] === 'faint') { //we could outright remove a pokemon...
                     //record that pokemon has fainted
-                } else if(tokens[1] === 'detailschange') {
-                    this.updatePokemonOnDetailsChange(tokens);
+                } else if(tokens[1] === 'detailschange' || tokens[1] === 'formechange') {
+                    this.updatePokemonOnFormeChange(tokens);
+                } else if(tokens[1] === '-transform') {
+                    this.updatePokemonOnTransform(tokens);
                 } else if(tokens[1] === '-damage') { //Error: not getting to here...
                     this.updatePokemonOnDamage(tokens);
                 } else if(tokens[1] === '-heal') {
@@ -586,6 +622,9 @@ var BattleRoom = new JS.Class({
 
             // Keep old boosts
             this.state.p1.pokemon[i].boosts = oldPokemon.boosts;
+
+            // Keep old volatiles
+            this.state.p1.pokemon[i].volatiles = oldPokemon.volatiles;
 
             if (pokemon.active) {
                 this.state.p1.active = [this.state.p1.pokemon[i]];
