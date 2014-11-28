@@ -12,16 +12,51 @@ var clone = require("clone");
 
 //TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
-	features = {};
+    var features = {};
 
-	features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){
-            return memo + pokemon.hp / pokemon.maxhp;
-        }, 0);
-	features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){
-            return memo + pokemon.hp / pokemon.maxhp;
-        }, 0);
+    //total hp
+    //Note: as hp depletes to zero it becomes increasingly less important.
+    //Pokemon with low hp have a higher chance of dying upon switching in
+    //or dying due to a faster opponent. This is more important for slow
+    //pokemon.
+    //good to keep into consideration...
+    features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){
+        return memo + pokemon.hp / pokemon.maxhp;
+    }, 0);
+    features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){
+        return memo + pokemon.hp / pokemon.maxhp;
+    }, 0);
 
-	return features;
+    //status effects. TODO: some status effects are worse on some pokemon than others
+    //paralyze: larger effects on fast, frail pokemon
+    //burn: larger effects on physical attackers
+    //toxic poison: larger effects on bulky attackers
+    //sleep: bad for everyone
+    //freeze: quite unfortunate.
+
+    //hazards and reflect/light screen/tailwind
+    //For hazards in particular, they're not as useful towards the end of the match...
+
+    //leech seed/infestation
+
+    //stat boosts
+
+    //substitute/etc.
+
+    //the current matchup. Dependent on several factors:
+    //-speed comparison. generally want higher speed (unless we're bulky, in which case that's fine)
+    //-damage potential. ideally we want to deal more damage to opponent than vice versa
+    //if we can kill the opponent right now then maybe that's something we should do
+    //instead of letting the opponent set up/get killed ourselves.
+
+    //overall pokemon variety. Overall we want a diverse set of pokemon.
+    //-types: want a variety of types to be good defensively vs. opponents
+    //-moves: want a vareity of types to be good offensively vs. opponents
+    //-stat spreads: we don't really want all physical or all special attackers.
+    //     also, our pokemon should be able to fulfill different roles, so we want
+    //     to keep a tanky pokemon around or a wall-breaker around
+
+    return features;
 }
 
 //TODO: Eval function needs to be made 1000x better

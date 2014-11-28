@@ -2546,21 +2546,22 @@ Battle = (function () {
 		text += pokemon.name + " " + pokemon.hp + "/" + pokemon.maxhp;
                 if(pokemon.status)
                     text += " " + pokemon.status;
-
-                text += " Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
-
-		text += " Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
+                if(pokemon.item)
+                    text += " @ " + pokemon.item;
+                text += ".  Ability: " + (pokemon.ability?pokemon.ability:'???');
+                text += ".  Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
+		text += "  Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
 		    return value != 0;
 		}));
 		return text;
 	    }
 
-		function requestType(request) {
-			if(request.wait) return "Wait";
-			if(request.active) return "Any Move";
-			if(request.forceSwitch) return "Force Switch";
-			return "Unkown Type";
-		}
+	    function requestType(request) {
+		if(request.wait) return "Wait";
+		if(request.active) return "Any Move";
+		if(request.forceSwitch) return "Force Switch";
+		return "Unkown Type";
+	    }
 
 	    var data = ''
 	    data += 'Turn: ' + this.turn + "\n";
@@ -2572,7 +2573,7 @@ Battle = (function () {
 
 	    data += this.p1.name + "\n";
 		data += "\tRequest Type: " + requestType(this.p1.request) + "\n";
-	    data += "\tactive:" + formatPokemon(this.p1.active[0]) + "\n";
+	    data += "\Active Pokemon: " + formatPokemon(this.p1.active[0]) + "\n";
             data += "\tAll Pokemon:\n";
             for(var i = 0; i < this.p1.pokemon.length; i++) {
                 data += "\t\t" + formatPokemon(this.p1.pokemon[i]) + "\n";

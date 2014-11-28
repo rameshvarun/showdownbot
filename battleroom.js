@@ -90,7 +90,7 @@ var BattleRoom = new JS.Class({
 
     //returns true if the player object is us
     isPlayer: function(player) {
-        return player === this.side + 'a:';
+        return player === this.side + 'a:' || player === this.side + ':';
     },
     // TODO: Understand more about the opposing pokemon
     updatePokemonOnSwitch: function(tokens) {
@@ -170,10 +170,6 @@ var BattleRoom = new JS.Class({
 
         //update hp
         pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
-        if(!this.isPlayer(player))
-            logger.info('P2 Pokemon Health: ' + health + ' Max Health: ' + maxHealth);
-        else
-            logger.info('P1 Pokemon Health: ' + health + ' Max Health: ' + maxHealth);
         this.updatePokemon(battleside, pokemon);
 
     },
@@ -237,47 +233,95 @@ var BattleRoom = new JS.Class({
         var tokens2 = tokens[2].split(' ');
         var player = tokens2[0];
         var pokeName = tokens2[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        for(var stat in pokemon.boosts) {
+            if(pokemon.boosts[stat] < 0)
+                delete pokemon.boosts[stat];
+        }
+        this.updatePokemon(battleside, pokemon);
+
+
     },
-    updatePokemonStart: function(tokens) {
-        //add condition such as leech seed or ability
+    updatePokemonStart: function(tokens, newStatus) {
+        //add condition such as leech seed, substitute, ability, confusion, encore
+        //move: yawn, etc.
+        //ability: flash fire, etc.
 
         var tokens2 = tokens[2].split(' ');
         var player = tokens2[0];
         var pokeName = tokens2[1];
-        var action = tokens[3]; //could be substitute, ability, ...
-        if(action.substring(0,4) === 'move') {
-            var move = action.substring(6);
-        } else if(action.substring(0,7) === 'ability') {
-            var ability = action.substring(9);
+        var status = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
         } else {
-            //something like substitute
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(status.substring(0,4) === 'move') {
+            status = status.substring(6);
+        } else if(status.substring(0,7) === 'ability') {
+            status = status.substring(9);
+        }
+
+        if(newStatus) {
+            pokemon.addVolatile(status);
+        } else {
+            pokemon.removeVolatile(status);
         }
     },
     updateField: function(tokens, newField) {
-        //as far as I know, only applies to trick room
+        //as far as I know, only applies to trick room, which is a pseudo-weather
         var fieldStatus = tokens[2].substring(6);
         if(newField) {
-            //add field status
+            this.state.addPseudoWeather(fieldStatus);
         } else {
-            //remove field status
+            this.state.removePseudoWeather(fieldStatus);
         }
     },
     updateWeather: function(tokens) {
         var weather = tokens[2];
         if(weather === "none") {
-            //remove weather
+            this.state.clearWeather();
         } else {
-            //keep track of weather
+            this.state.setWeather(weather);
             //we might want to keep track of how long the weather has been lasting...
+            //might be done automatically for us
         }
     },
     updateSideCondition: function(tokens, newSide) {
         var player = tokens[2].split(' ')[0];
-        var sideStatus = tokens[3].substring(6);
+        var sideStatus = tokens[3];
+        if(sideStatus.substring(0,4) === "move")
+            sideStatus = tokens[3].substring(6);
+        var battleside = undefined;
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
         if(newSide) {
-            //add side status
+            battleside.addSideCondition(sideStatus);
             //Note: can have multiple layers of toxic spikes or spikes
         } else {
+            battleside.removeSideCondition(sideStatus);
             //remove side status
         }
     },
@@ -306,26 +350,29 @@ var BattleRoom = new JS.Class({
         }
         this.updatePokemon(battleside, pokemon);
     },
-    updatePokemonOnActivate: function(tokens) {
-        //activate condition such as protect (is that it?)
-
-        var tokens2 = tokens[2].split(' ');
-        var player = tokens2[0];
-        var pokeName = tokens2[1];
-        var activated = tokens[3];
-    },
     updatePokemonOnItem: function(tokens, newItem) {
         //record that a pokemon has an item. Most relevant if a Pokemon has an air balloon/chesto berry
+        //TODO: try to predict the opponent's current item
 
         var tokens2 = tokens[2].split(' ');
         var player = tokens2[0];
         var pokeName = tokens2[1];
         var item = tokens[3];
-        if(newItem) {
-            //record that a Pokemon does have an item
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
         } else {
-            //record that a Pokemon has lost its item
+            battleside = this.state.p2;
         }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(newItem) {
+            pokemon.setItem(item);
+        } else {
+            pokemon.clearItem(item);
+        }
+        this.updatePokemon(battleside, pokemon);
     },
 
     //this is going to be very compilcated. There should only be three main cases:
@@ -357,7 +404,6 @@ var BattleRoom = new JS.Class({
 
             var tokens = log[i].split('|');
             if (tokens.length > 1) {
-                logger.info(tokens[1] + ": " + tokens);
 
                 if (tokens[1] === 'tier') {
                     this.tier = tokens[2];
@@ -398,7 +444,9 @@ var BattleRoom = new JS.Class({
                 } else if(tokens[1] === '-restoreboost') {
                     this.updatePokemonRestoreBoost(tokens);
                 } else if(tokens[1] === '-start') {
-                    this.updatePokemonStart(tokens);
+                    this.updatePokemonStart(tokens, true);
+                } else if(tokens[1] === '-end') {
+                    this.updatePokemonStart(tokens, false);
                 } else if(tokens[1] === '-fieldstart') {
                     this.updateField(tokens, true);
                 } else if(tokens[1] === '-fieldend') {
@@ -413,10 +461,6 @@ var BattleRoom = new JS.Class({
                     this.updatePokemonStatus(tokens, true);
                 } else if(tokens[1] === '-curestatus') {
                     this.updatePokemonStatus(tokens, false);
-                } else if(tokens[1] === '-singleturn') {
-                    //stuff happens, generally for protect
-                } else if(tokens[1] === '-activate') {
-                    this.updatePokemonOnActivate(tokens);
                 } else if(tokens[1] === '-item') {
                     this.updatePokemonOnItem(tokens, true);
                 } else if(tokens[1] === '-enditem') {
@@ -431,8 +475,12 @@ var BattleRoom = new JS.Class({
 
                 } else if(tokens[1] === '-crit') {
 
-                } else if(tokens[1] === 'c') {
-                    //chat message. Ignore. (or should we? haha)
+                } else if(tokens[1] === '-singleturn') { //for protect. But we only care about damage...
+
+                } else if(tokens[1] === 'c') {//chat message. ignore. (or should we?)
+
+                } else if(tokens[1] === '-activate') { //protect, wonder guard, etc.
+
                 } else if(tokens[1] === '-fail') {
 
                 } else if(tokens[1] === '-immune') {
@@ -512,7 +560,7 @@ var BattleRoom = new JS.Class({
                     spd: 31,
                     spe: 31
                 },
-                item: (pokemon.item || pokemon.item === '') ? '' : Items[pokemon.item].name,
+                item: (!pokemon.item || pokemon.item === '') ? '' : Items[pokemon.item].name,
                 level: level,
                 active: pokemon.active,
                 shiny: false
@@ -534,7 +582,6 @@ var BattleRoom = new JS.Class({
             this.state.p1.pokemon[i].hp = parseInt(condition[0]);
             if(condition.length > 2) {//add status condition
                 this.state.p1.pokemon[i].setStatus(condition[2]); //necessary?
-                logger.info("WE'VE GOT A STATUS CONDITION UP HERE!");
             }
 
             // Keep old boosts
