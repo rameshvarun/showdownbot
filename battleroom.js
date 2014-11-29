@@ -96,6 +96,7 @@ var BattleRoom = new JS.Class({
     // TODO: Understand more about the opposing pokemon
     updatePokemonOnSwitch: function(tokens) {
         var tokens2 = tokens[2].split(' ');
+        var level = tokens[3].split(', ')[1].substring(1);
         var tokens4 = tokens[4].split(/\/| /); //for health
 
         var player = tokens2[0];
@@ -125,6 +126,7 @@ var BattleRoom = new JS.Class({
             pokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
             var set = this.state.getTemplate(pokeName);
             set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
+            set.level = parseInt(level);
             pokemon = new BattlePokemon(set, battleside);
         }
         //opponent hp is recorded as percentage
@@ -505,6 +507,7 @@ var BattleRoom = new JS.Class({
                     this.updatePokemonOnItem(tokens, false);
                 } else if(tokens[1] === '-ability') {
                     //relatively situational -- important for mold breaker/teravolt, etc.
+                    //needs to be recorded so that we don't accidentally lose a pokemon
 
                     //We don't actually care about the rest of these effects, as they are merely visual
                 } else if (tokens[1] === 'move') {

@@ -2548,6 +2548,7 @@ Battle = (function () {
                     text += " " + pokemon.status;
                 if(pokemon.item)
                     text += " @ " + pokemon.item;
+                text += ", L" + (pokemon.level?pokemon.level:'??');
                 text += ".  Ability: " + (pokemon.ability?pokemon.ability:'???');
                 text += ".  Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
 		text += "  Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
