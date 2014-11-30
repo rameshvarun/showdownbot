@@ -2,7 +2,7 @@ var express = require('express');
 var app = express();
 var nunjucks = require('nunjucks');
 var bot = require('./bot')
-var program = require('commander');
+var program = require('commander'); // Get Command-line arguments
 
 // Results database
 var db = require("./db");
@@ -74,6 +74,11 @@ app.get('/room', function(req, res){
 
 app.get('/replay', function(req, res){
 	db.findOne({ id: req.query.id }).exec(function(err, game) {
+		if(!game) {
+			res.redirect("/");
+			return;
+		}
+
 		game.decisions = JSON.parse(game.decisions);
 		res.render('replay.html', {
 			game : game,

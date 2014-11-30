@@ -15,13 +15,24 @@ var clone = require("./../clone");
 
 var convnetjs = require("convnetjs");
 
+// Extract a feature vector from the hash. This is to maintain a specific order
+var BATTLE_FEATURES = ["mySum", "theirSum", "myAlive", "theirAlive"];
+function featureVector(battle) {
+    var features = getFeatures(battle);
+    var vec = _.map(BATTLE_FEATURES, function(feature) {
+       return features[feature];
+    });
+    return new convnetjs.Vol(vec);
+}
+
+
 // Initialize neural network
 var net = undefined;
 var trainer = undefined;
 if(program.net === "create") {
     logger.info("Creating neural network...");
     var layer_defs = [];
-    layer_defs.push({type: 'input', out_sx: 1, out_sy: 1, out_depth: 16});
+    layer_defs.push({type: 'input', out_sx: 1, out_sy: 1, out_depth: BATTLE_FEATURES.length});
     //layer_defs.push({type:'fc', num_neurons:20, activation:'relu'});
     //layer_defs.push({type:'fc', num_neurons:20, activation:'sigmoid'});
     layer_defs.push({type: 'regression', num_neurons: 1});
@@ -30,6 +41,7 @@ if(program.net === "create") {
 
     fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
     program.net = "update"; // Now that the network is created, it should also be updated
+    logger.info("Created neural network...");
 } else if(program.net === "use" || program.net === "update") {
     logger.info("Loading neural network...");
     net = new convnetjs.Net();
@@ -37,7 +49,12 @@ if(program.net === "create") {
 }
 
 // If we need to be able to update the network, create a trainer object
-if(program.net === "update") trainer = new convnetjs.SGDTrainer(net, {learning_rate:0.01, momentum:0.0, batch_size:1, l2_decay:0.001});
+if(program.net === "update") {
+    trainer = new convnetjs.Trainer(net, {method: 'sgd', learning_rate: 0.01,
+        l2_decay: 0.001, momentum: 0.9, batch_size: 10,
+        l1_decay: 0.001});
+    logger.trace("Created SGD Trainer");
+}
 
 // Train the network on a s r s' pair.
 function train_net(battle, newbattle) {
@@ -50,9 +67,9 @@ function train_net(battle, newbattle) {
     var opponentAlive = _.any(newbattle.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
 
     if (!playerAlive || !opponentAlive) value = playerAlive ? GAME_END_REWARD : -GAME_END_REWARD;
-    else value = eval(newbattle);
+    else value = DISCOUNT * eval(newbattle);
 
-    var vec = new convnetjs.Vol(_.values(getFeatures(battle)));
+    var vec = featureVector(battle);
     trainer.train(vec, [value]);
 
     fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
@@ -97,6 +114,7 @@ function getFeatures(battle) {
         return memo + (pokemon.status && pokemon.hp?1:0);
     }, 0);
 
+    // TODO: Splitup into individual hazards
     //hazards and reflect/light screen/tailwind
     //For hazards in particular, they're not as useful towards the end of the match...
     features.myHazards = Object.keys(battle.p1.sideConditions).length;
@@ -181,8 +199,8 @@ var weights = {
 };
 //TODO: Eval function needs to be made 1000x better
 function eval(battle) {
-    var features = getFeatures(battle);
     var value = 0;
+    var features = getFeatures(battle);
 
     if(program.net === "none") {
         for (var key in weights) {
@@ -190,7 +208,7 @@ function eval(battle) {
             value += weights[key] * features[key];
         }
     } else if (program.net === "update" || program.net === "use") {
-        var vec = new convnetjs.Vol(_.values(features));
+        var vec = featureVector(battle);
         value = net.forward(vec).w[0];
     }
 
@@ -216,6 +234,7 @@ var decide = module.exports.decide = function(battle, choices) {
 }
 
 var GAME_END_REWARD = 1000;
+var DISCOUNT = 0.9;
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
 //However, it should have slightly different priorities, such as status effects...
@@ -244,7 +263,7 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	if(depth == 0) {
 		node.value = eval(battle);
 	} else {
-		// If the request is a wait request, the opposing player has to take a turn. Don't decrement depth.
+		// If the request is a wait request, the opposing player has to take a turn, and we don't
 		if(battle.p1.request.wait) {
 			return opponentTurn(battle, depth, alpha, beta, null);
 		}
@@ -291,12 +310,12 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		state: battle.toString()
 	}
 
-	// If the request is a wait request, only the player chooses an action. Don't decrement depth
+	// If the request is a wait request, only the player chooses an action
 	if(battle.p2.request.wait) {
 		var newbattle = clone(battle);
 		newbattle.p2.decision = true;
 		newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p1), newbattle.rqid);
-		return playerTurn(newbattle, depth, alpha, beta);
+		return playerTurn(newbattle, depth - 1, alpha, beta);
 	}
 
 	var choices = BattleRoom.parseRequest(battle.p2.request).choices;

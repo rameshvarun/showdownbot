@@ -709,7 +709,7 @@ var BattleRoom = new JS.Class({
 
             room.decisions.push(result);
             room.send("/choose " + BattleRoom.toChoiceString(result, room.state.p1) + "|" + decision.rqid, room.id);
-        }, 2000);
+        }, 5000);
     },
     // Static class methods
     extend: {
