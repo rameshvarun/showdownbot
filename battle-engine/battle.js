@@ -2555,6 +2555,9 @@ Battle = (function () {
 		    return value != 0;
 		}));
                 text += "  Stats: " + JSON.stringify(pokemon.baseStats);
+                if(pokemon.isActive) {
+                    text += ". I'm Active!";
+                }
 		return text;
 	    }
 

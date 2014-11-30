@@ -21,11 +21,20 @@ function getFeatures(battle) {
     //pokemon.
     //good to keep into consideration...
     features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){
-        return memo + pokemon.hp / pokemon.maxhp;
+        return memo + (pokemon.hp?pokemon.hp:0) / pokemon.maxhp;
     }, 0);
     features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){
-        return memo + pokemon.hp / pokemon.maxhp;
+        return memo + (pokemon.hp?pokemon.hp:0) / pokemon.maxhp;
     }, 0);
+
+    //alive pokemon
+    features.myAlive = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.hp?1:0);
+    }, 0);
+    features.theirAlive = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.hp?1:0);
+    }, 0);
+
 
     //status effects. TODO: some status effects are worse on some pokemon than others
     //paralyze: larger effects on fast, frail pokemon
@@ -33,15 +42,60 @@ function getFeatures(battle) {
     //toxic poison: larger effects on bulky attackers
     //sleep: bad for everyone
     //freeze: quite unfortunate.
+    features.myStatus = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.status && pokemon.hp?1:0);
+    }, 0);
+    features.theirStatus = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.status && pokemon.hp?1:0);
+    }, 0);
 
     //hazards and reflect/light screen/tailwind
     //For hazards in particular, they're not as useful towards the end of the match...
+    features.myHazards = Object.keys(battle.p1.sideConditions).length;
+    features.theirHazards = Object.keys(battle.p2.sideConditions).length;
 
-    //leech seed/infestation
+    //leech seed/infestation/confusion
+    var harmfulVolatiles = ['confusion', 'leechseed', 'infestation'];
+    features.myVolatiles = _.reduce(harmfulVolatiles, function(memo, volatile) {
+        return memo + (volatile in battle.p1.active[0].volatiles?1:0);
+    }, 0);
+    features.theirVolatiles = _.reduce(harmfulVolatiles, function(memo, volatile) {
+        return memo + (volatile in battle.p2.active[0].volatiles?1:0);
+    }, 0);
 
-    //stat boosts
+    //stat boosts (note: some stats don't really matter for a pokemon, like physical attacks)
+    features.myStats = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
+        if(pokemon.hp)
+            return memo;
+        var numStats = 0;
+        for(var stat in pokemon.boosts) {
+            if(stat !== 'accuracy' && stat !== 'evasion')
+                numStats += pokemon.boosts[stat];
+        }
+        return memo + numStats;
+    }, 0);
+    features.theirStats = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
+        if(!pokemon.hp)
+            return memo;
+        var numStats = 0;
+        for(var stat in pokemon.boosts) {
+            if(stat !== 'accuracy' && stat !== 'evasion')
+                numStats += pokemon.boosts[stat];
+        }
+        return memo + numStats;
+    }, 0);
 
     //substitute/etc.
+    features.mySub = ('substitute' in battle.p1.active[0].volatiles?1:0);
+    features.theirSub = ('substitute' in battle.p2.active[0].volatiles?1:0);
+
+    //items: prefer to have items rather than lose them (such as berries, focus sash, ...)
+    features.myItems = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.item&&pokemon.hp?1:0);
+    }, 0);
+    features.theirItems = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
+        return memo + (pokemon.item&&pokemon.hp?1:0);
+    }, 0);
 
     //the current matchup. Dependent on several factors:
     //-speed comparison. generally want higher speed (unless we're bulky, in which case that's fine)
@@ -59,19 +113,41 @@ function getFeatures(battle) {
     return features;
 }
 
+var weights = {
+    mySum: 50, //health is most important
+    theirSum: -50,
+    myAlive: 20, //alive pokemon is next most important
+    theirAlive: -20,
+    myStatus: 4,
+    theirStatus: -4,
+    myHazards: 1,
+    theirHazards: -1,
+    myVolatiles: 2,
+    theirVolatiles: -2,
+    myStats: 10,
+    theirStatus: -10,
+    mySub: 5,
+    theirSub: -5,
+    myItems: 4,
+    theirItems: -4
+};
 //TODO: Eval function needs to be made 1000x better
 function eval(battle) {
-	var features = getFeatures(battle);
-	var value = features.mySum - features.theirSum;
-	logger.trace(JSON.stringify(features) + ": " + value);
-	return value;
+    var features = getFeatures(battle);
+    var value = 0;
+    for(var key in weights) {
+        //logger.info(key + " " + weights[key] + " * " + features[key]);
+        value += weights[key] * features[key];
+    }
+    logger.trace(JSON.stringify(features) + ": " + value);
+    return value;
 }
 
 var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
     battle.start();
 
-    var MAX_DEPTH = 2; //for now...
+    var MAX_DEPTH = 1; //for now...
     var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
     if(!maxNode.action) return randombot.decide(battle, choices);
     logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
@@ -109,8 +185,8 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 		if(battle.p1.request.wait) {
 			return opponentTurn(battle, depth, alpha, beta, null);
 		}
-
 		var choices = (givenchoices) ? givenchoices : BattleRoom.parseRequest(battle.p1.request).choices;
+                logger.info("Our choices: " + choices);
 	        //choices = _.sample(choices, 1); // For testing
                 //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
                 //Essentially, the greedy algorithm
@@ -162,9 +238,11 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 	var choices = BattleRoom.parseRequest(battle.p2.request).choices;
 
-	// Make sure we can't switch to an unown
+	// Make sure we can't switch to an unown or to a fainted pokemon
 	choices = _.reject(choices, function(choice) {
-		if(choice.type == "switch" && battle.p2.pokemon[choice.id].name == "Unown") return true;
+		if(choice.type == "switch" &&
+                   (battle.p2.pokemon[choice.id].name == "Unown" ||
+                    !battle.p2.pokemon[choice.id].hp)) return true;
 		return false;
 	});
 

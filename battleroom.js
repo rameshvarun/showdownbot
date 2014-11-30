@@ -64,7 +64,7 @@ var BattleRoom = new JS.Class({
         }
     },
     //given a player and a pokemon, returns the corresponding pokemon object
-    getPokemon: function(battleside, pokename, temp) {
+    getPokemon: function(battleside, pokename) {
         for(var i = 0; i < battleside.pokemon.length; i++) {
             if(battleside.pokemon[i].name === pokename || //for mega pokemon
                battleside.pokemon[i].name.substr(0,pokename.length) === pokename)
@@ -130,20 +130,46 @@ var BattleRoom = new JS.Class({
         //opponent hp is recorded as percentage
         pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
         pokemon.position = 0;
+
+        battleside.active[0].isActive = false;
         pokemon.isActive = true;
         this.updatePokemon(battleside,pokemon);
 
-        if(this.isPlayer(player)) {
+        /*if(this.isPlayer(player)) {
             //this.state.p1.active[0].isActive = false;
             this.state.p1.active = [pokemon];
         } else {
             //this.state.p2.active[0].isActive = false;
             this.state.p2.active = [pokemon];
-        }
-
+        }*/
+        battleside.active = [pokemon];
 
         //Ensure that active pokemon is in slot zero
         battleside.pokemon = _.sortBy(battleside.pokemon, function(pokemon) { return pokemon == battleside.active[0] ? 0 : 1 });
+    },
+    updatePokemonOnMove: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var move = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        //update last move (that's it)
+        pokemon.lastMove = toId(move);
+        this.updatePokemon(battleside, pokemon);
+
     },
     updatePokemonOnDamage: function(tokens) {
         //extract damage dealt to a particular pokemon
@@ -463,6 +489,8 @@ var BattleRoom = new JS.Class({
 
                 } else if (tokens[1] === 'switch' || tokens[1] === 'drag') {
                     this.updatePokemonOnSwitch(tokens);
+                } else if (tokens[1] === 'move') {
+                    this.updatePokemonOnMove(tokens);
                 } else if(tokens[1] === 'faint') { //we could outright remove a pokemon...
                     //record that pokemon has fainted
                 } else if(tokens[1] === 'detailschange' || tokens[1] === 'formechange') {
@@ -488,7 +516,7 @@ var BattleRoom = new JS.Class({
                 } else if(tokens[1] === '-fieldstart') {
                     this.updateField(tokens, true);
                 } else if(tokens[1] === '-fieldend') {
-                    this.updateField(tokens, true);
+                    this.updateField(tokens, false);
                 } else if(tokens[1] === '-weather') {
                     this.updateWeather(tokens);
                 } else if(tokens[1] === '-sidestart') {
@@ -508,8 +536,6 @@ var BattleRoom = new JS.Class({
                     //needs to be recorded so that we don't accidentally lose a pokemon
 
                     //We don't actually care about the rest of these effects, as they are merely visual
-                } else if (tokens[1] === 'move') {
-                    //we actually don't need to record anything -- moves are mostly dealt for us
                 } else if(tokens[1] === '-supereffective') {
 
                 } else if(tokens[1] === '-crit') {
