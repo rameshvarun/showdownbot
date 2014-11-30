@@ -147,7 +147,7 @@ var overallMinNode = {};
 var decide = module.exports.decide = function(battle, choices) {
     battle.start();
 
-    var MAX_DEPTH = 1; //for now...
+    var MAX_DEPTH = 2; //for now...
     var maxNode = playerTurn(battle, MAX_DEPTH, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, choices);
     if(!maxNode.action) return randombot.decide(battle, choices);
     logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
@@ -159,6 +159,8 @@ var decide = module.exports.decide = function(battle, choices) {
 	tree: maxNode
     };
 }
+
+var GAME_END_REWARD = 1000;
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
 //However, it should have slightly different priorities, such as status effects...
@@ -177,6 +179,12 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	}
 
 	// Look for win / loss
+	var playerAlive = _.any(battle.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
+	var opponentAlive = _.any(battle.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
+	if (!playerAlive || !opponentAlive) {
+		node.value = playerAlive ? GAME_END_REWARD : -GAME_END_REWARD;
+		return node;
+	}
 
 	if(depth == 0) {
 		node.value = eval(battle);
