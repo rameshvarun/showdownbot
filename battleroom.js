@@ -125,6 +125,11 @@ var BattleRoom = new JS.Class({
             var set = this.state.getTemplate(pokeName);
             set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
             set.level = parseInt(level);
+            //choose the best ability
+            var abilities = Object.values(set.abilities).sort(function(a,b) {
+                return this.state.getAbility(b).rating - this.state.getAbility(a).rating;
+            }.bind(this));
+            set.ability = abilities[0];
             pokemon = new BattlePokemon(set, battleside);
         }
         //opponent hp is recorded as percentage
