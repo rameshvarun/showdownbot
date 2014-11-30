@@ -110,14 +110,12 @@ var BattleRoom = new JS.Class({
             logger.info("Our pokemon has switched! " + tokens[2]);
             battleside = this.state.p1;
             //remove boosts for current pokemon
-            this.state.p1.active[0].boosts = {};
-            this.state.p1.active[0].volatiles = {};
+            this.state.p1.active[0].clearVolatile();
         } else {
             logger.info("Opponents pokemon has switched! " + tokens[2]);
             battleside = this.state.p2;
             //remove boosts for current pokemon
-            this.state.p2.active[0].boosts = {};
-            this.state.p2.active[0].volatiles = {};
+            this.state.p2.active[0].clearVolatile();
         }
         var pokemon = this.getPokemon(battleside, pokeName);
 
