@@ -2554,6 +2554,7 @@ Battle = (function () {
 		text += "  Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
 		    return value != 0;
 		}));
+                text += "  Stats: " + JSON.stringify(pokemon.baseStats);
 		return text;
 	    }
 
