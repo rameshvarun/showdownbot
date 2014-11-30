@@ -6,6 +6,7 @@ program
 	.option('--port [port]', 'The port on which to serve the web console. [3000]', "3000")
 	.option('--ranked', 'Challenge on the ranked league.')
 	.option('--net [action]', "'create' - generate a new network. 'update' - use and modify existing network. 'use' - use, but don't modify network. 'none' - use hardcoded weights. ['none']", 'none')
+	.option('--algorithm [algorithm]', "Can be 'minimax' or 'random'. ['minimax']", "minimax")
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server

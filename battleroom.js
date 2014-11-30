@@ -30,6 +30,8 @@ var _ = require("underscore");
 
 var clone = require("./clone");
 
+var program = require('commander'); // Get Command-line arguments
+
 var BattleRoom = new JS.Class({
     initialize: function(id, sendfunc) {
         this.id = id;
@@ -700,7 +702,11 @@ var BattleRoom = new JS.Class({
         setTimeout(function() {
             var decision = BattleRoom.parseRequest(request);
 
-            var result = minimaxbot.decide(clone(room.state), decision.choices);
+            // Use specified algorithm to determine resulting choice
+            var result = undefined;
+            if(program.algorithm === "minimax") result = minimaxbot.decide(clone(room.state), decision.choices);
+            else if(program.algorithm === "random") result = randombot.decide(clone(room.state), decision.choices);
+
             room.decisions.push(result);
             room.send("/choose " + BattleRoom.toChoiceString(result, room.state.p1) + "|" + decision.rqid, room.id);
         }, 2000);
