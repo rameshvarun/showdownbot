@@ -121,9 +121,10 @@ var BattleRoom = new JS.Class({
 
         if(!pokemon) { //pokemon has not been defined yet, so choose one of the unowns
             //note: this will not quite work if the pokemon is actually unown
-            pokemon = this.getPokemon(battleside, "Unown"); //TODO: make it work for not unowns
+            pokemon = this.getPokemon(battleside, "Unown");
             var set = this.state.getTemplate(pokeName);
-            set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
+            set.moves = set.randomBattleMoves;
+            //set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
             set.level = parseInt(level);
             //choose the best ability
             var abilities = Object.values(set.abilities).sort(function(a,b) {
@@ -131,6 +132,7 @@ var BattleRoom = new JS.Class({
             }.bind(this));
             set.ability = abilities[0];
             pokemon = new BattlePokemon(set, battleside);
+            pokemon.trueMoves = []; //gradually add moves as they are seen
         }
         //opponent hp is recorded as percentage
         pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
@@ -140,13 +142,6 @@ var BattleRoom = new JS.Class({
         pokemon.isActive = true;
         this.updatePokemon(battleside,pokemon);
 
-        /*if(this.isPlayer(player)) {
-            //this.state.p1.active[0].isActive = false;
-            this.state.p1.active = [pokemon];
-        } else {
-            //this.state.p2.active[0].isActive = false;
-            this.state.p2.active = [pokemon];
-        }*/
         battleside.active = [pokemon];
 
         //Ensure that active pokemon is in slot zero
@@ -171,8 +166,32 @@ var BattleRoom = new JS.Class({
             return;
         }
 
-        //update last move (that's it)
+        //update last move (so we don't protect twice in a row)
         pokemon.lastMove = toId(move);
+        //we are no longer newly switched (so we don't fakeout after the first turn)
+        pokemon.activeTurns += 1;
+        if(!this.isPlayer(player)) { //anticipate more about the Pokemon's moves
+            if(pokemon.trueMoves.indexOf(move) < 0) {
+                pokemon.trueMoves.push(toId(move));
+                logger.info("Determined that " + pokeName + " can use " + move);
+                //if we have collected all of the moves, eliminate all other possibilities
+                if(pokemon.trueMoves.length >= 4) {
+                    logger.info("Collected all of " + pokeName + "'s moves!");
+                    var newMoves = [];
+                    var newMoveset = [];
+                    for(var i = 0; i < pokemon.moveset.length; i++) {
+                        if(pokemon.trueMoves.indexOf(pokemon.moveset[i].id) >= 0) {
+                            newMoves.push(pokemon.moveset[i].id); //store id
+                            newMoveset.push(pokemon.moveset[i]);  //store actual moves
+                        }
+                    }
+                    pokemon.moves = newMoves;
+                    pokemon.moveset = newMoveset;
+                }
+
+            }
+        }
+
         this.updatePokemon(battleside, pokemon);
 
     },
