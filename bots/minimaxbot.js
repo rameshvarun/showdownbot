@@ -3,12 +3,60 @@ var log4js = require('log4js');
 var logger = require('log4js').getLogger("minimax");
 log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
 
+var program = require('commander'); // Program settings
+var fs = require('fs');
+
 var _ = require("underscore");
 var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
 
 var clone = require("./../clone");
+
+var convnetjs = require("convnetjs");
+
+// Initialize neural network
+var net = undefined;
+var trainer = undefined;
+if(program.net === "create") {
+    logger.info("Creating neural network...");
+    var layer_defs = [];
+    layer_defs.push({type: 'input', out_sx: 1, out_sy: 1, out_depth: 16});
+    //layer_defs.push({type:'fc', num_neurons:20, activation:'relu'});
+    //layer_defs.push({type:'fc', num_neurons:20, activation:'sigmoid'});
+    layer_defs.push({type: 'regression', num_neurons: 1});
+    net = new convnetjs.Net();
+    net.makeLayers(layer_defs);
+
+    fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
+    program.net = "update"; // Now that the network is created, it should also be updated
+} else if(program.net === "use" || program.net === "update") {
+    logger.info("Loading neural network...");
+    net = new convnetjs.Net();
+    net.fromJSON(JSON.parse(fs.readFileSync("network.json", "utf8")));
+}
+
+// If we need to be able to update the network, create a trainer object
+if(program.net === "update") trainer = new convnetjs.SGDTrainer(net, {learning_rate:0.01, momentum:0.0, batch_size:1, l2_decay:0.001});
+
+// Train the network on a s r s' pair.
+function train_net(battle, newbattle) {
+    logger.info("Training neural network...");
+
+    var value = undefined;
+
+    // Is newbattle a win / loss
+    var playerAlive = _.any(newbattle.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
+    var opponentAlive = _.any(newbattle.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
+
+    if (!playerAlive || !opponentAlive) value = playerAlive ? GAME_END_REWARD : -GAME_END_REWARD;
+    else value = eval(newbattle);
+
+    var vec = new convnetjs.Vol(_.values(getFeatures(battle)));
+    trainer.train(vec, [value]);
+
+    fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
+}
 
 //TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
@@ -135,10 +183,17 @@ var weights = {
 function eval(battle) {
     var features = getFeatures(battle);
     var value = 0;
-    for(var key in weights) {
-        //logger.info(key + " " + weights[key] + " * " + features[key]);
-        value += weights[key] * features[key];
+
+    if(program.net === "none") {
+        for (var key in weights) {
+            //logger.info(key + " " + weights[key] + " * " + features[key]);
+            value += weights[key] * features[key];
+        }
+    } else if (program.net === "update" || program.net === "use") {
+        var vec = new convnetjs.Vol(_.values(features));
+        value = net.forward(vec).w[0];
     }
+
     logger.trace(JSON.stringify(features) + ": " + value);
     return value;
 }
@@ -269,7 +324,10 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 			newbattle.choose('p1', BattleRoom.toChoiceString(playerAction, newbattle.p1), newbattle.rqid);
 		else
 			newbattle.p1.decision = true;
-		newbattle.choose('p2', BattleRoom.toChoiceString(choices[i], newbattle.p2), newbattle.rqid);
+		    newbattle.choose('p2', BattleRoom.toChoiceString(choices[i], newbattle.p2), newbattle.rqid);
+
+            if(program.net === "update") train_net(battle, newbattle);
+
                 logger.info("Player action: " + BattleRoom.toChoiceString(playerAction, newbattle.p1));
                 logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i], newbattle.p2));
                 logger.info("My Resulting Health:");
