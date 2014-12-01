@@ -16,6 +16,8 @@ log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
 
 var CHALLENGING = false;
 
+var minimaxbot = require("./bots/minimaxbot");
+
 // Challenging logic
 var MAX_ROOMS = 3;
 setInterval(function() {
@@ -46,6 +48,15 @@ app.get('/', function(req, res){
 app.get('/challenge', function(req, res){
 	bot.send("/challenge " + req.query.user + ", randombattle", null);
 	res.redirect("/");
+});
+
+app.get('/weights', function(req, res){
+	var text = "";
+	_.each(minimaxbot.BATTLE_FEATURES, function (feature, index) {
+		var value = minimaxbot.net.layers[1].filters[0].w.get(index);
+		text += feature + ": " + value + "<br>";
+	})
+	res.send(text);
 });
 
 // Challenging control

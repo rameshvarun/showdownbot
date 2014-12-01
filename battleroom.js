@@ -7,7 +7,8 @@ JS.require('JS.Class');
 require("sugar");
 
 // Account file
-var account = require("./account.json");
+var bot = require("./bot.js");
+var account = bot.account;
 
 // Results database
 var db = require("./db");

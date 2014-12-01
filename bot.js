@@ -7,6 +7,7 @@ program
 	.option('--ranked', 'Challenge on the ranked league.')
 	.option('--net [action]', "'create' - generate a new network. 'update' - use and modify existing network. 'use' - use, but don't modify network. 'none' - use hardcoded weights. ['none']", 'none')
 	.option('--algorithm [algorithm]', "Can be 'minimax' or 'random'. ['minimax']", "minimax")
+	.option('--account [file]', "File from which to load credentials. ['account.json']", "account.json")
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server
@@ -22,15 +23,16 @@ log4js.loadAppender('file');
 var logger = require('log4js').getLogger("bot");
 log4js.addAppender(log4js.appenders.file('logs/bot.log'), 'bot');
 
-var account = require("./account.json"); // Login information for this bot
+// Login information for this bot
+var account = JSON.parse(fs.readFileSync(program.account));
+module.exports.account = account;
 
 var webconsole = require("./console.js");// Web console
 
 // Connect to server
 var sockjs = require('sockjs-client-ws');
 var client = null;
-if(!program.console)
-	client = sockjs.create(program.host);
+if(!program.console) client = sockjs.create(program.host);
 
 // Domain (replay button redirects here)
 var DOMAIN = "http://play.pokemonshowdown.com/";

@@ -16,7 +16,32 @@ var clone = require("./../clone");
 var convnetjs = require("convnetjs");
 
 // Extract a feature vector from the hash. This is to maintain a specific order
-var BATTLE_FEATURES = ["mySum", "theirSum", "myAlive", "theirAlive"];
+var BATTLE_FEATURES = [];
+var SIDE_CONDITIONS = ["reflect", "spikes", "stealthrock", "stickyweb", "toxicspikes", "lightscreen"];
+var VOLATILES = ["substitute", 'confusion', 'leechseed', 'infestation'];
+var BOOSTS = ['atk', 'def', 'spa', 'spd', 'spe', 'accuracy', 'evasion'];
+
+_.each(SIDE_CONDITIONS, function(condition) {
+    BATTLE_FEATURES.push("p1_" + condition);
+    BATTLE_FEATURES.push("p2_" + condition);
+});
+
+_.each(VOLATILES, function(volatile) {
+    BATTLE_FEATURES.push("p1_" + volatile);
+    BATTLE_FEATURES.push("p2_" + volatile);
+});
+
+_.each(BOOSTS, function(boost) {
+    BATTLE_FEATURES.push("p1_" + boost);
+    BATTLE_FEATURES.push("p2_" + boost);
+});
+
+for(var i = 0; i < 6; ++i) {
+    BATTLE_FEATURES.push("p1_" + i + "_hp");
+    BATTLE_FEATURES.push("p2_" + i + "_hp");
+}
+module.exports.BATTLE_FEATURES = BATTLE_FEATURES;
+
 function featureVector(battle) {
     var features = getFeatures(battle);
     var vec = _.map(BATTLE_FEATURES, function(feature) {
@@ -47,11 +72,12 @@ if(program.net === "create") {
     net = new convnetjs.Net();
     net.fromJSON(JSON.parse(fs.readFileSync("network.json", "utf8")));
 }
+module.exports.net = net;
 
 // If we need to be able to update the network, create a trainer object
 if(program.net === "update") {
     trainer = new convnetjs.Trainer(net, {method: 'sgd', learning_rate: 0.01,
-        l2_decay: 0.001, momentum: 0.9, batch_size: 10,
+        l2_decay: 0.001, momentum: 0.0, batch_size: 10,
         l1_decay: 0.001});
     logger.trace("Created SGD Trainer");
 }
@@ -67,7 +93,10 @@ function train_net(battle, newbattle) {
     var opponentAlive = _.any(newbattle.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
 
     if (!playerAlive || !opponentAlive) value = playerAlive ? GAME_END_REWARD : -GAME_END_REWARD;
-    else value = DISCOUNT * eval(newbattle);
+    else value = eval(newbattle);
+
+    // Apply discount
+    value *= DISCOUNT;
 
     var vec = featureVector(battle);
     trainer.train(vec, [value]);
@@ -79,102 +108,130 @@ function train_net(battle, newbattle) {
 function getFeatures(battle) {
     var features = {};
 
-    //total hp
-    //Note: as hp depletes to zero it becomes increasingly less important.
-    //Pokemon with low hp have a higher chance of dying upon switching in
-    //or dying due to a faster opponent. This is more important for slow
-    //pokemon.
-    //good to keep into consideration...
-    features.mySum = _.reduce(battle.p1.pokemon, function(memo, pokemon){
-        return memo + (pokemon.hp?pokemon.hp:0) / pokemon.maxhp;
-    }, 0);
-    features.theirSum = _.reduce(battle.p2.pokemon, function(memo, pokemon){
-        return memo + (pokemon.hp?pokemon.hp:0) / pokemon.maxhp;
-    }, 0);
+    // Side conditions
+    _.each(SIDE_CONDITIONS, function(condition) {
+        features["p1_" + condition] = (condition in battle.p1.sideConditions) ? 1 : 0;
+        features["p2_" + condition] = (condition in battle.p2.sideConditions) ? 1 : 0;
+    });
 
-    //alive pokemon
-    features.myAlive = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.hp?1:0);
-    }, 0);
-    features.theirAlive = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.hp?1:0);
-    }, 0);
+    // Volatile statuses on current pokemon
+    _.each(VOLATILES, function(volatile) {
+        features["p1_" + volatile] = (volatile in battle.p1.active[0].volatiles ? 1 : 0);
+        features["p2_" + volatile] = (volatile in battle.p2.active[0].volatiles ? 1 : 0);
+    });
 
+    // Boosts on pokemon
+    _.each(BOOSTS, function(boost) {
+        features["p1_" + boost] = battle.p1.active[0].boosts[boost];
+        features["p2_" + boost] = battle.p2.active[0].boosts[boost];
+    });
 
-    //status effects. TODO: some status effects are worse on some pokemon than others
-    //paralyze: larger effects on fast, frail pokemon
-    //burn: larger effects on physical attackers
-    //toxic poison: larger effects on bulky attackers
-    //sleep: bad for everyone
-    //freeze: quite unfortunate.
-    features.myStatus = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.status && pokemon.hp?1:0);
-    }, 0);
-    features.theirStatus = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.status && pokemon.hp?1:0);
-    }, 0);
+    // Per pokemon features
+    for(var i = 0; i < 6; ++i) {
+        // Pokemon health percentage
+        features["p1_" + i + "_hp"] = (battle.p1.pokemon[i].hp ? battle.p1.pokemon[i].hp : 0) / battle.p1.pokemon[i].maxhp;
+        features["p2_" + i + "_hp"] = (battle.p2.pokemon[i].hp ? battle.p2.pokemon[i].hp : 0) / battle.p2.pokemon[i].maxhp;
+    }
 
-    // TODO: Splitup into individual hazards
-    //hazards and reflect/light screen/tailwind
-    //For hazards in particular, they're not as useful towards the end of the match...
-    features.myHazards = Object.keys(battle.p1.sideConditions).length;
-    features.theirHazards = Object.keys(battle.p2.sideConditions).length;
+    if(program.net === "none") {
 
-    //leech seed/infestation/confusion
-    var harmfulVolatiles = ['confusion', 'leechseed', 'infestation'];
-    features.myVolatiles = _.reduce(harmfulVolatiles, function(memo, volatile) {
-        return memo + (volatile in battle.p1.active[0].volatiles?1:0);
-    }, 0);
-    features.theirVolatiles = _.reduce(harmfulVolatiles, function(memo, volatile) {
-        return memo + (volatile in battle.p2.active[0].volatiles?1:0);
-    }, 0);
+        //total hp
+        //Note: as hp depletes to zero it becomes increasingly less important.
+        //Pokemon with low hp have a higher chance of dying upon switching in
+        //or dying due to a faster opponent. This is more important for slow
+        //pokemon.
+        //good to keep into consideration...
+        features.mySum = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.hp ? pokemon.hp : 0) / pokemon.maxhp;
+        }, 0);
+        features.theirSum = _.reduce(battle.p2.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.hp ? pokemon.hp : 0) / pokemon.maxhp;
+        }, 0);
 
-    //stat boosts (note: some stats don't really matter for a pokemon, like physical attacks)
-    features.myStats = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
-        if(pokemon.hp)
-            return memo;
-        var numStats = 0;
-        for(var stat in pokemon.boosts) {
-            if(stat !== 'accuracy' && stat !== 'evasion')
-                numStats += pokemon.boosts[stat];
-        }
-        return memo + numStats;
-    }, 0);
-    features.theirStats = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
-        if(!pokemon.hp)
-            return memo;
-        var numStats = 0;
-        for(var stat in pokemon.boosts) {
-            if(stat !== 'accuracy' && stat !== 'evasion')
-                numStats += pokemon.boosts[stat];
-        }
-        return memo + numStats;
-    }, 0);
+        //alive pokemon
+        features.myAlive = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.hp ? 1 : 0);
+        }, 0);
+        features.theirAlive = _.reduce(battle.p2.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.hp ? 1 : 0);
+        }, 0);
 
-    //substitute/etc.
-    features.mySub = ('substitute' in battle.p1.active[0].volatiles?1:0);
-    features.theirSub = ('substitute' in battle.p2.active[0].volatiles?1:0);
+        //status effects. TODO: some status effects are worse on some pokemon than others
+        //paralyze: larger effects on fast, frail pokemon
+        //burn: larger effects on physical attackers
+        //toxic poison: larger effects on bulky attackers
+        //sleep: bad for everyone
+        //freeze: quite unfortunate.
+        features.myStatus = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.status && pokemon.hp ? 1 : 0);
+        }, 0);
+        features.theirStatus = _.reduce(battle.p2.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.status && pokemon.hp ? 1 : 0);
+        }, 0);
 
-    //items: prefer to have items rather than lose them (such as berries, focus sash, ...)
-    features.myItems = _.reduce(battle.p1.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.item&&pokemon.hp?1:0);
-    }, 0);
-    features.theirItems = _.reduce(battle.p2.pokemon, function(memo, pokemon) {
-        return memo + (pokemon.item&&pokemon.hp?1:0);
-    }, 0);
+        // TODO: Splitup into individual hazards
+        //hazards and reflect/light screen/tailwind
+        //For hazards in particular, they're not as useful towards the end of the match...
+        features.myHazards = Object.keys(battle.p1.sideConditions).length;
+        features.theirHazards = Object.keys(battle.p2.sideConditions).length;
 
-    //the current matchup. Dependent on several factors:
-    //-speed comparison. generally want higher speed (unless we're bulky, in which case that's fine)
-    //-damage potential. ideally we want to deal more damage to opponent than vice versa
-    //if we can kill the opponent right now then maybe that's something we should do
-    //instead of letting the opponent set up/get killed ourselves.
+        //leech seed/infestation/confusion
+        var harmfulVolatiles = ['confusion', 'leechseed', 'infestation'];
+        features.myVolatiles = _.reduce(harmfulVolatiles, function (memo, volatile) {
+            return memo + (volatile in battle.p1.active[0].volatiles ? 1 : 0);
+        }, 0);
+        features.theirVolatiles = _.reduce(harmfulVolatiles, function (memo, volatile) {
+            return memo + (volatile in battle.p2.active[0].volatiles ? 1 : 0);
+        }, 0);
 
-    //overall pokemon variety. Overall we want a diverse set of pokemon.
-    //-types: want a variety of types to be good defensively vs. opponents
-    //-moves: want a vareity of types to be good offensively vs. opponents
-    //-stat spreads: we don't really want all physical or all special attackers.
-    //     also, our pokemon should be able to fulfill different roles, so we want
-    //     to keep a tanky pokemon around or a wall-breaker around
+        //stat boosts (note: some stats don't really matter for a pokemon, like physical attacks)
+        features.myStats = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+            if (pokemon.hp)
+                return memo;
+            var numStats = 0;
+            for (var stat in pokemon.boosts) {
+                if (stat !== 'accuracy' && stat !== 'evasion')
+                    numStats += pokemon.boosts[stat];
+            }
+            return memo + numStats;
+        }, 0);
+        features.theirStats = _.reduce(battle.p2.pokemon, function (memo, pokemon) {
+            if (!pokemon.hp)
+                return memo;
+            var numStats = 0;
+            for (var stat in pokemon.boosts) {
+                if (stat !== 'accuracy' && stat !== 'evasion')
+                    numStats += pokemon.boosts[stat];
+            }
+            return memo + numStats;
+        }, 0);
+
+        //substitute/etc.
+        features.mySub = ('substitute' in battle.p1.active[0].volatiles ? 1 : 0);
+        features.theirSub = ('substitute' in battle.p2.active[0].volatiles ? 1 : 0);
+
+        //items: prefer to have items rather than lose them (such as berries, focus sash, ...)
+        features.myItems = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.item && pokemon.hp ? 1 : 0);
+        }, 0);
+        features.theirItems = _.reduce(battle.p2.pokemon, function (memo, pokemon) {
+            return memo + (pokemon.item && pokemon.hp ? 1 : 0);
+        }, 0);
+
+        //the current matchup. Dependent on several factors:
+        //-speed comparison. generally want higher speed (unless we're bulky, in which case that's fine)
+        //-damage potential. ideally we want to deal more damage to opponent than vice versa
+        //if we can kill the opponent right now then maybe that's something we should do
+        //instead of letting the opponent set up/get killed ourselves.
+
+        //overall pokemon variety. Overall we want a diverse set of pokemon.
+        //-types: want a variety of types to be good defensively vs. opponents
+        //-moves: want a vareity of types to be good offensively vs. opponents
+        //-stat spreads: we don't really want all physical or all special attackers.
+        //     also, our pokemon should be able to fulfill different roles, so we want
+        //     to keep a tanky pokemon around or a wall-breaker around
+
+    }
 
     return features;
 }
