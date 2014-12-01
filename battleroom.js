@@ -506,7 +506,7 @@ var BattleRoom = new JS.Class({
                         logger.info(this.title + ": I lost this game");
                     }
 
-                    this.saveResult();
+                    if(!program.nosave) this.saveResult();
 
                     // Leave in two seconds
                     var battleroom = this;

@@ -8,6 +8,7 @@ program
 	.option('--net [action]', "'create' - generate a new network. 'update' - use and modify existing network. 'use' - use, but don't modify network. 'none' - use hardcoded weights. ['none']", 'none')
 	.option('--algorithm [algorithm]', "Can be 'minimax' or 'random'. ['minimax']", "minimax")
 	.option('--account [file]', "File from which to load credentials. ['account.json']", "account.json")
+	.option('--nosave', "Don't save games to the in-memeory db.")
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server

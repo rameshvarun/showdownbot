@@ -76,7 +76,7 @@ module.exports.net = net;
 
 // If we need to be able to update the network, create a trainer object
 if(program.net === "update") {
-    trainer = new convnetjs.Trainer(net, {method: 'sgd', learning_rate: 0.01,
+    trainer = new convnetjs.Trainer(net, {method: 'sgd', learning_rate: 0.001,
         l2_decay: 0.001, momentum: 0.0, batch_size: 10,
         l1_decay: 0.001});
     logger.trace("Created SGD Trainer");
@@ -101,7 +101,7 @@ function train_net(battle, newbattle) {
     var vec = featureVector(battle);
     trainer.train(vec, [value]);
 
-    fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
+    fs.writeFileSync("network.json", JSON.stringify(net.toJSON(), undefined, 2));
 }
 
 //TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
@@ -290,8 +290,8 @@ var decide = module.exports.decide = function(battle, choices) {
     };
 }
 
-var GAME_END_REWARD = 1000;
-var DISCOUNT = 0.9;
+var GAME_END_REWARD = module.exports.GAME_END_REWARD = 1000;
+var DISCOUNT = module.exports.DISCOUNT = 0.9;
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
 //However, it should have slightly different priorities, such as status effects...
@@ -336,14 +336,14 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 		    var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
 		    node.children.push(minNode);
 
-		    if(minNode.value != null) {
-			if(minNode.value > node.value) {
-			    node.value = minNode.value;
-			    node.action = choices[i];
-                            overallMinNode = minNode;
-			}
-			alpha = Math.max(alpha, minNode.value);
-			if(beta <= alpha) break;
+		    if(minNode.value != null && isFinite(minNode.value) ) {
+                if(minNode.value > node.value) {
+                    node.value = minNode.value;
+                    node.action = choices[i];
+                                overallMinNode = minNode;
+                }
+                alpha = Math.max(alpha, minNode.value);
+                if(beta <= alpha) break;
 		    }
 		}
 
@@ -417,7 +417,7 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		var maxNode = playerTurn(newbattle, depth - 1, alpha, beta);
 		node.children.push(maxNode);
 
-		if(maxNode.value != null) {
+		if(maxNode.value != null && isFinite(maxNode.value)) {
 			if(maxNode.value < node.value) {
 				node.value = maxNode.value;
 				node.action = choices[i];
