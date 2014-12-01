@@ -39,11 +39,13 @@ var BattleRoom = new JS.Class({
         this.title = "Untitled";
         this.send = sendfunc;
 
-        //TODO: we assume that we are p1, but this is not always the case
+        // Construct a battle object that we will modify as our state
         this.state = Battle.construct(id, 'base', false);
-        this.state.join('p1', 'botPlayer');
+        this.state.join('p1', 'botPlayer'); // We will be player 1 in our local simulation
         this.state.join('p2', 'humanPlayer');
         this.state.reportPercentages = true;
+
+        this.previousState = null; // For TD Learning
 
         setTimeout(function() {
             sendfunc(account.message, id); // Notify User that this is a bot
@@ -506,6 +508,13 @@ var BattleRoom = new JS.Class({
                         logger.info(this.title + ": I lost this game");
                     }
 
+                    if(program.net === "update" && this.previousState) {
+                        var playerAlive = _.any(this.state.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
+                        var opponentAlive = _.any(this.state.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
+
+                        if(!playerAlive || !opponentAlive) minimaxbot.train_net(this.previousState, null, (this.winner == account.username));
+                    }
+
                     if(!program.nosave) this.saveResult();
 
                     // Leave in two seconds
@@ -701,11 +710,17 @@ var BattleRoom = new JS.Class({
         var room = this;
 
         setTimeout(function() {
+            if(program.net === "update") {
+                if(room.previousState != null) minimaxbot.train_net(room.previousState, room.state);
+                room.previousState = clone(room.state);
+            }
+
             var decision = BattleRoom.parseRequest(request);
 
             // Use specified algorithm to determine resulting choice
             var result = undefined;
-            if(program.algorithm === "minimax") result = minimaxbot.decide(clone(room.state), decision.choices);
+            if(decision.choices.length == 1) result = decision.choices[0];
+            else if(program.algorithm === "minimax") result = minimaxbot.decide(clone(room.state), decision.choices);
             else if(program.algorithm === "random") result = randombot.decide(clone(room.state), decision.choices);
 
             room.decisions.push(result);

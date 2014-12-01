@@ -2,6 +2,8 @@
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("minimax");
 log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
+var learnlog = require('log4js').getLogger("learning");
+log4js.addAppender(log4js.appenders.file('logs/learning.log'), 'learning');
 
 var program = require('commander'); // Program settings
 var fs = require('fs');
@@ -55,7 +57,7 @@ function featureVector(battle) {
 var net = undefined;
 var trainer = undefined;
 if(program.net === "create") {
-    logger.info("Creating neural network...");
+    learnlog.info("Creating neural network...");
     var layer_defs = [];
     layer_defs.push({type: 'input', out_sx: 1, out_sy: 1, out_depth: BATTLE_FEATURES.length});
     //layer_defs.push({type:'fc', num_neurons:20, activation:'relu'});
@@ -66,9 +68,9 @@ if(program.net === "create") {
 
     fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
     program.net = "update"; // Now that the network is created, it should also be updated
-    logger.info("Created neural network...");
+    learnlog.info("Created neural network...");
 } else if(program.net === "use" || program.net === "update") {
-    logger.info("Loading neural network...");
+    learnlog.info("Loading neural network...");
     net = new convnetjs.Net();
     net.fromJSON(JSON.parse(fs.readFileSync("network.json", "utf8")));
 }
@@ -76,23 +78,19 @@ module.exports.net = net;
 
 // If we need to be able to update the network, create a trainer object
 if(program.net === "update") {
-    trainer = new convnetjs.Trainer(net, {method: 'sgd', learning_rate: 0.001,
-        l2_decay: 0.001, momentum: 0.0, batch_size: 10,
-        l1_decay: 0.001});
-    logger.trace("Created SGD Trainer");
+    trainer = new convnetjs.Trainer(net, {method: 'adadelta', l2_decay: 0.001,
+        batch_size: 10});
+    learnlog.trace("Created SGD Trainer");
 }
 
-// Train the network on a s r s' pair.
-function train_net(battle, newbattle) {
-    logger.info("Training neural network...");
+// Train the network on a battle, newbattle
+// If this is a reward state, set newbattle to null, and win to whether or not the bot won
+var train_net = module.exports.train_net = function(battle, newbattle, win) {
+    learnlog.info("Training neural network...");
 
     var value = undefined;
 
-    // Is newbattle a win / loss
-    var playerAlive = _.any(newbattle.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
-    var opponentAlive = _.any(newbattle.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
-
-    if (!playerAlive || !opponentAlive) value = playerAlive ? GAME_END_REWARD : -GAME_END_REWARD;
+    if (newbattle == null) value = win ? GAME_END_REWARD : -GAME_END_REWARD;
     else value = eval(newbattle);
 
     // Apply discount
@@ -401,8 +399,6 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		else
 			newbattle.p1.decision = true;
 		    newbattle.choose('p2', BattleRoom.toChoiceString(choices[i], newbattle.p2), newbattle.rqid);
-
-            if(program.net === "update") train_net(battle, newbattle);
 
                 logger.info("Player action: " + BattleRoom.toChoiceString(playerAction, newbattle.p1));
                 logger.info("Opponent action: " + BattleRoom.toChoiceString(choices[i], newbattle.p2));
