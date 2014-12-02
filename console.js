@@ -2,7 +2,7 @@ var express = require('express');
 var app = express();
 var nunjucks = require('nunjucks');
 var bot = require('./bot')
-var program = require('commander');
+var program = require('commander'); // Get Command-line arguments
 
 // Results database
 var db = require("./db");
@@ -16,8 +16,10 @@ log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
 
 var CHALLENGING = false;
 
+var minimaxbot = require("./bots/minimaxbot");
+
 // Challenging logic
-var MAX_ROOMS = 1;
+var MAX_ROOMS = 3;
 setInterval(function() {
 	if(CHALLENGING && _.values(bot.ROOMS).length < MAX_ROOMS) {
 		logger.info("Challenging...");
@@ -42,6 +44,21 @@ app.get('/', function(req, res){
 	});
 });
 
+// Challenge a specific user
+app.get('/challenge', function(req, res){
+	bot.send("/challenge " + req.query.user + ", randombattle", null);
+	res.redirect("/");
+});
+
+app.get('/weights', function(req, res){
+	var text = "";
+	_.each(minimaxbot.BATTLE_FEATURES, function (feature, index) {
+		var value = minimaxbot.net.layers[1].filters[0].w.get(index);
+		text += feature + ": " + value + "<br>";
+	})
+	res.send(text);
+});
+
 // Challenging control
 app.get('/startchallenging', function(req, res){
 	CHALLENGING = true;
@@ -52,8 +69,27 @@ app.get('/endchallenging', function(req, res){
 	res.redirect("/");
 });
 
+app.get('/room', function(req, res){
+	if(bot.ROOMS[req.query.id]) {
+		res.render("room.html", {
+			game: bot.ROOMS[req.query.id],
+			stringify : JSON.stringify,
+			format: function(str) {
+				return str.replace(/\n/g, "<br>").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
+			}
+		});
+	} else {
+		res.redirect("/");
+	}
+});
+
 app.get('/replay', function(req, res){
 	db.findOne({ id: req.query.id }).exec(function(err, game) {
+		if(!game) {
+			res.redirect("/");
+			return;
+		}
+
 		game.decisions = JSON.parse(game.decisions);
 		res.render('replay.html', {
 			game : game,
@@ -61,7 +97,6 @@ app.get('/replay', function(req, res){
 		});
 	});
 });
-
 
 app.get('/search', function(req, res){
 	logger.debug("Asked to query from web console.");

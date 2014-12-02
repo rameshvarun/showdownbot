@@ -7,7 +7,8 @@ JS.require('JS.Class');
 require("sugar");
 
 // Account file
-var account = require("./account.json");
+var bot = require("./bot.js");
+var account = bot.account;
 
 // Results database
 var db = require("./db");
@@ -28,511 +29,757 @@ var Items = require("./data/items").BattleItems;
 
 var _ = require("underscore");
 
-module.exports = new JS.Class({
-	initialize: function(id, sendfunc) {
-	    this.id = id;
-	    this.title = "Untitled";
-	    this.send = sendfunc;
-            this.oppPokemon = '';
-            this.activePokemon = '';
+var clone = require("./clone");
 
-	    //TODO: we assume that we are p1, but this is not always the case
-            this.state = Battle.construct(id, 'base', false);
-            this.state.join('p1','botPlayer');
-            this.state.join('p2','humanPlayer');
+var program = require('commander'); // Get Command-line arguments
 
-	    setTimeout(function() {
-		sendfunc(account.message, id); // Notify User that this is a bot
-		sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
-	    }, 10000);
+var BattleRoom = new JS.Class({
+    initialize: function(id, sendfunc) {
+        this.id = id;
+        this.title = "Untitled";
+        this.send = sendfunc;
 
-	    this.decisions = [];
+        // Construct a battle object that we will modify as our state
+        this.state = Battle.construct(id, 'base', false);
+        this.state.join('p1', 'botPlayer'); // We will be player 1 in our local simulation
+        this.state.join('p2', 'humanPlayer');
+        this.state.reportPercentages = true;
+
+        this.previousState = null; // For TD Learning
+
+        setTimeout(function() {
+            sendfunc(account.message, id); // Notify User that this is a bot
+            sendfunc("/timer", id); // Start timer (for user leaving or bot screw ups)
+        }, 10000);
+
+        this.decisions = [];
         this.log = "";
-	},
-	init: function(data) {
-		var log = data.split('\n');
-		if (data.substr(0,6) === '|init|') log.shift();
-		if (log.length && log[0].substr(0, 7) === '|title|') {
-			this.title = log[0].substr(7);
-			log.shift();
-			logger.info("Title for " + this.id + " is " + this.title);
-		}
-	},
-        processData: function(data) {
-            //This is data reported by the server. Parse each line of code.
-            //Different things to parse:
-            //1. |switch|p1a: Pokemon|POkemon, L70|264/264
-            //2. |move|p1a: Ho-oh|Tailwind|pqa: Ho-oh
 
-            //The rest are possible side effects... Important to distinguish
-            //3. |-sidestart|p1: greedybot|move: Tailwind
-            //4. |-weather|Hail|[upkeep]
-            //5. |-damage|p1a: Ho-Oh|248/264|[from] hail
-            //6. |-heal|p1a: Ho-Oh|248/264|[from] Leftovers
-            //and various other messages... we can sift through the messages
-            var dataLines = data.split('\n');
-                var turn = '';
-
-            for(var i in data.split('\n')) {
-                logger.trace('data data! ' + dataLines[i]);
-                var tokens = dataLines[i].split('|');
-                logger.trace(tokens);
-                if(tokens.length > 1) {
-                    if(tokens[1] === 'move') {
-                        logger.trace("a move!");
-                    } else if(tokens[1]  === 'switch' || tokens[1] === 'drag') {
-                        //check if new Pokemon
-                        logger.trace('a switch!');
-                        var playerTokens = tokens[2].split(' ');
-                        var isNew = true;
-                        if(playerTokens[0] === myPlayerId) {
-                            this.state.playerState.pokemon
-                                .forEach(function(pokemon) {
-                                             if(pokemon.name ===
-                                                playerTokens[1]) {
-                                                 isNew = false;
-                                             }
-                                         });
-                            /*if(isNew) {
-                                this.state.playerState.pokemon.push(new
-                                                                    BattlePokemon(playerTokens[1],
-                            }*/
-                        }
-                        //restore Pokemon state otherwise
-                    } else if(tokens[1] === 'faint') {
-                        logger.trace('a ko!');
-                    }
-                }
-            }
-        },
-	recieve: function(data) {
-		if (!data) return;
-
-		logger.trace("<< " + data);
-
-		if (data.substr(0,6) === '|init|') {
-			return this.init(data);
-		}
-		if (data.substr(0,9) === '|request|') {
-			return this.receiveRequest(JSON.parse(data.substr(9)));
-		}
-
-		var log = data.split('\n');
-		for (var i = 0; i < log.length; i++) {
-            this.log += log[i] + "\n";
-
-                    var tokens = log[i].split('|');
-                    if(tokens.length > 1) {
-
-                        if(tokens[1] === 'tier') {
-                            this.tier = tokens[2];
-                        }
-
-		        if (tokens[1] === 'win') {
-			    this.send("gg", this.id);
-
-			    this.winner = tokens[2];
-			    if(this.winner == account.username) {
-			        logger.info(this.title + ": I won this game");
-			    } else {
-			        logger.info(this.title + ": I lost this game");
-			    }
-
-			    this.saveResult();
-
-                // Leave in two seconds
-                var battleroom = this;
-                setTimeout(function() { battleroom.send("/leave " + battleroom.id); }, 2000);
-
-		        }
-                        if (tokens[1] === 'switch' || tokens[1] === 'drag') {
-                            logger.info("Oppnents pokemon has switched! " + tokens[2]);
-                            var tokens2 = tokens[2].split(' ');
-                            if(tokens2[0] === this.oppSide + 'a:') { //TODO: opponent might not be p2a
-                                var oldPokemon = this.oppPokemon;
-                                this.oppPokemon = new BattlePokemon(this.state.getTemplate(tokens2[1]), this.state.p2);
-                                logger.info("Opponent Switches To: " + this.oppPokemon.name);
-                                //if(oldPokemon === '' || !oldPokemon) { //then try to make a move
-                                if(this.request.active)
-                                    this.makeMove(this.request.rqid, this.request.active[0].moves);
-                                //}
-                            }
-                        } else if(tokens[1] === 'move') {
-
-                        }
-                    }
-		}
-	},
-	saveResult: function() {
-        // Save game data to data base
-		game = {
-			"title" : this.title,
-			"id" : this.id,
-			"win" : (this.winner == account.username),
-			"date" : new Date(),
-            "decisions" : JSON.stringify(this.decisions),
-            "log" : this.log,
-            "tier" : this.tier
-		}
-		db.insert(game, function (err, newDoc) {
-			logger.info("Saved result of " + newDoc.title + " to database.");
-		});
-	},
-	receiveRequest: function(request) {
-		if (!request) {
-			this.side = '';
-			return;
-		}
-
-		request.requestType = null;
-		var notifyObject = null;
-		if (request.active) {
-			request.requestType = "move";
-		} else if (request.forceSwitch) {
-			request.requestType = 'switch';
-		} else if (request.teamPreview) {
-			request.requestType = 'team';
-		} else if (request.wait) {
-			request.requestType = 'wait';
-		}
-
-		this.choice = null;
-		this.request = request;
-		if (request.side) {
-			this.updateSide(request.side, true);
-		}
-		this.notifyRequest();
-	},
-	updateSide: function(sideData) {
-		if(!sideData || !sideData.id) return;
-
-		logger.info("Starting to update my side data.");
-		for(var i = 0; i < sideData.pokemon.length; ++i) {
-			var pokemon = sideData.pokemon[i];
-
-			var details = pokemon.details.split(",");
-			var name = details[0].trim();
-			var level = parseInt(details[1].trim().substring(1));
-			var gender = details[2] ? details[2].trim() : null;
-
-			var template = {
-				name : name,
-				moves : pokemon.moves,
-				ability : Abilities[pokemon.baseAbility].name,
-				evs : {
-					hp: 85,
-					atk: 85,
-					def: 85,
-					spa: 85,
-					spd: 85,
-					spe: 85
-				},
-				ivs : {
-					hp: 31,
-					atk: 31,
-					def: 31,
-					spa: 31,
-					spd: 31,
-					spe: 31
-				},
-				item : (pokemon.item === '') ? '' : Items[pokemon.item].name,
-				level : level,
-                                active : pokemon.active,
-				shiny : false
-			};
-
-			// Initialize pokemon
-			this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
-
-			// Update the pokemon object with latest stats
-			for(var stat in pokemon.stats) {
-				this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
-			}
-                        if(template.active) this.activePokemon = this.state.p1.pokemon[i];
-
-			// TODO(rameshvarun): Somehow parse / load in current hp and status conditions
-		}
-
-		this.side = sideData.id;
-        this.oppSide = (this.side === "p1") ? "p2" : "p1";
-		logger.info(this.title + ": My current side is " + this.side);
-	},
-	makeMove: function(rqid, moves) {
-                //TODO(harrison8989): choose mega evolution when possible
-                //TODO(harrison8989): implement greedy algorithm
-                /*
-                  Steps to victory:
-                  1. construct object that replicates opponent's state
-                  2. implement type advantages/figure out how they work
-                  2.5 a pokemon has a type...
-                  3. first part of greedy: maximum amount of damage/use a thing
-                  4. second part of greedy: if in disadvantageous situation, switch
-
-                  TODO: algorithm doesn't take into account choice items which lock a pokemon in
-            */
-            if(this.oppPokemon === '' || !this.oppPokemon) { //try again after some time
-                logger.info("Can't make a move until we determine opponent Pokemon!");
+        this.state.start();
+    },
+    init: function(data) {
+        var log = data.split('\n');
+        if (data.substr(0, 6) === '|init|') {
+            log.shift();
+        }
+        if (log.length && log[0].substr(0, 7) === '|title|') {
+            this.title = log[0].substr(7);
+            log.shift();
+            logger.info("Title for " + this.id + " is " + this.title);
+        }
+    },
+    //given a player and a pokemon, returns the corresponding pokemon object
+    getPokemon: function(battleside, pokename) {
+        for(var i = 0; i < battleside.pokemon.length; i++) {
+            if(battleside.pokemon[i].name === pokename || //for mega pokemon
+               battleside.pokemon[i].name.substr(0,pokename.length) === pokename)
+                return battleside.pokemon[i];
+        }
+        return undefined; //otherwise Pokemon does not exist
+    },
+    //given a player and a pokemon, updates that pokemon in the battleside object
+    updatePokemon: function(battleside, pokemon) {
+        for(var i = 0; i < battleside.pokemon.length; i++) {
+            if(battleside.pokemon[i].name === pokemon.name) {
+                battleside.pokemon[i] = pokemon;
                 return;
             }
-            var decision = {
-                prompt: "I need a move that is either strong against " + this.oppPokemon.name + " (" + JSON.stringify(this.oppPokemon.getTypes()) + ") or is fitting for the situation.",
-                choices: moves,
-                choice: "",
-                reason: ""
+        }
+        logger.info("Could not find " + pokemon.name + " in the battle side, creating new Pokemon.");
+        for(var i = battleside.pokemon.length - 1; i >= 0; i--) {
+            if(battleside.pokemon[i].name === "Unown") {
+                battleside.pokemon[i] = pokemon;
+                return;
+            }
+        }
+    },
+
+    //returns true if the player object is us
+    isPlayer: function(player) {
+        return player === this.side + 'a:' || player === this.side + ':';
+    },
+    // TODO: Understand more about the opposing pokemon
+    updatePokemonOnSwitch: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var level = tokens[3].split(', ')[1].substring(1);
+        var tokens4 = tokens[4].split(/\/| /); //for health
+
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var health = tokens4[0];
+        var maxHealth = tokens4[1];
+
+        var battleside = undefined;
+
+        if (this.isPlayer(player)) {
+            logger.info("Our pokemon has switched! " + tokens[2]);
+            battleside = this.state.p1;
+            //remove boosts for current pokemon
+            this.state.p1.active[0].clearVolatile();
+        } else {
+            logger.info("Opponents pokemon has switched! " + tokens[2]);
+            battleside = this.state.p2;
+            //remove boosts for current pokemon
+            this.state.p2.active[0].clearVolatile();
+        }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(!pokemon) { //pokemon has not been defined yet, so choose one of the unowns
+            //note: this will not quite work if the pokemon is actually unown
+            pokemon = this.getPokemon(battleside, "Unown");
+            var set = this.state.getTemplate(pokeName);
+            set.moves = set.randomBattleMoves;
+            //set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
+            set.level = parseInt(level);
+            //choose the best ability
+            var abilities = Object.values(set.abilities).sort(function(a,b) {
+                return this.state.getAbility(b).rating - this.state.getAbility(a).rating;
+            }.bind(this));
+            set.ability = abilities[0];
+            pokemon = new BattlePokemon(set, battleside);
+            pokemon.trueMoves = []; //gradually add moves as they are seen
+        }
+        //opponent hp is recorded as percentage
+        pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
+        pokemon.position = 0;
+
+        battleside.active[0].isActive = false;
+        pokemon.isActive = true;
+        this.updatePokemon(battleside,pokemon);
+
+        battleside.active = [pokemon];
+
+        //Ensure that active pokemon is in slot zero
+        battleside.pokemon = _.sortBy(battleside.pokemon, function(pokemon) { return pokemon == battleside.active[0] ? 0 : 1 });
+    },
+    updatePokemonOnMove: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var move = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        //update last move (so we don't protect twice in a row)
+        pokemon.lastMove = toId(move);
+        //we are no longer newly switched (so we don't fakeout after the first turn)
+        pokemon.activeTurns += 1;
+        if(!this.isPlayer(player)) { //anticipate more about the Pokemon's moves
+            if(pokemon.trueMoves.indexOf(move) < 0) {
+                pokemon.trueMoves.push(move);
+                logger.info("Determined that " + pokeName + " can use " + move);
+                //if we have collected all of the moves, eliminate all other possibilities
+                if(pokemon.trueMoves.length >= 4) {
+                    logger.info("Collected all of " + pokeName + "'s moves!");
+                    var newMoves = [];
+                    var newMoveset = [];
+                    for(var i = 0; i < pokemon.moveset.length; i++) {
+                        if(pokemon.trueMoves.indexOf(pokemon.moveset[i].id) >= 0) {
+                            newMoves.push(pokemon.moveset[i].id); //store id
+                            newMoveset.push(pokemon.moveset[i]);  //store actual moves
+                        }
+                    }
+                    pokemon.moves = newMoves;
+                    pokemon.moveset = newMoveset;
+                }
+
+            }
+        }
+
+        this.updatePokemon(battleside, pokemon);
+
+    },
+    updatePokemonOnDamage: function(tokens) {
+        //extract damage dealt to a particular pokemon
+        //also takes into account passives
+        //note that opponent health is recorded as percent. Keep this in mind
+
+        var tokens2 = tokens[2].split(' ');
+        var tokens3 = tokens[3].split(/\/| /);
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var health = tokens3[0];
+        var maxHealth = tokens3[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        //update hp
+        pokemon.hp = Math.ceil(health / maxHealth * pokemon.maxhp);
+        this.updatePokemon(battleside, pokemon);
+
+    },
+    updatePokemonOnBoost: function(tokens, isBoost) {
+        var tokens2 = tokens[2].split(' ');
+        var stat = tokens[3];
+        var boostCount = parseInt(tokens[4]);
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        if(isBoost) {
+            if(stat in pokemon.boosts)
+                pokemon.boosts[stat] += boostCount;
+            else
+                pokemon.boosts[stat] = boostCount;
+        } else {
+            if(stat in pokemon.boosts)
+                pokemon.boosts[stat] -= boostCount;
+            else
+                pokemon.boosts[stat] = -boostCount;
+        }
+        this.updatePokemon(battleside, pokemon);
+    },
+    updatePokemonSetBoost: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var stat = tokens[3];
+        var boostCount = parseInt(tokens[4]);
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        pokemon.boosts[stat] = boostCount;
+        this.updatePokemon(battleside, pokemon);
+    },
+    updatePokemonRestoreBoost: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+        if(!pokemon) {
+            logger.error("We have never seen " + pokeName + " before in this battle. Should not have happened.");
+            return;
+        }
+
+        for(var stat in pokemon.boosts) {
+            if(pokemon.boosts[stat] < 0)
+                delete pokemon.boosts[stat];
+        }
+        this.updatePokemon(battleside, pokemon);
+
+
+    },
+    updatePokemonStart: function(tokens, newStatus) {
+        //add condition such as leech seed, substitute, ability, confusion, encore
+        //move: yawn, etc.
+        //ability: flash fire, etc.
+
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var status = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(status.substring(0,4) === 'move') {
+            status = status.substring(6);
+        } else if(status.substring(0,7) === 'ability') {
+            status = status.substring(9);
+        }
+
+        if(newStatus) {
+            pokemon.addVolatile(status);
+        } else {
+            pokemon.removeVolatile(status);
+        }
+        this.updatePokemon(battleside, pokemon);
+    },
+    updateField: function(tokens, newField) {
+        //as far as I know, only applies to trick room, which is a pseudo-weather
+        var fieldStatus = tokens[2].substring(6);
+        if(newField) {
+            this.state.addPseudoWeather(fieldStatus);
+        } else {
+            this.state.removePseudoWeather(fieldStatus);
+        }
+    },
+    updateWeather: function(tokens) {
+        var weather = tokens[2];
+        if(weather === "none") {
+            this.state.clearWeather();
+        } else {
+            this.state.setWeather(weather);
+            //we might want to keep track of how long the weather has been lasting...
+            //might be done automatically for us
+        }
+    },
+    updateSideCondition: function(tokens, newSide) {
+        var player = tokens[2].split(' ')[0];
+        var sideStatus = tokens[3];
+        if(sideStatus.substring(0,4) === "move")
+            sideStatus = tokens[3].substring(6);
+        var battleside = undefined;
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+
+        if(newSide) {
+            battleside.addSideCondition(sideStatus);
+            //Note: can have multiple layers of toxic spikes or spikes
+        } else {
+            battleside.removeSideCondition(sideStatus);
+            //remove side status
+        }
+    },
+    updatePokemonStatus: function(tokens, newStatus) {
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var status = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(newStatus) {
+            pokemon.setStatus(status);
+            //record a new Pokemon's status
+            //also keep track of how long the status has been going? relevant for toxic poison
+            //actually, might be done by default
+        } else {
+            pokemon.clearStatus();
+            //heal a Pokemon's status
+        }
+        this.updatePokemon(battleside, pokemon);
+    },
+    updatePokemonOnItem: function(tokens, newItem) {
+        //record that a pokemon has an item. Most relevant if a Pokemon has an air balloon/chesto berry
+        //TODO: try to predict the opponent's current item
+
+        var tokens2 = tokens[2].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var item = tokens[3];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+        var pokemon = this.getPokemon(battleside, pokeName);
+
+        if(newItem) {
+            pokemon.setItem(item);
+        } else {
+            pokemon.clearItem(item);
+        }
+        this.updatePokemon(battleside, pokemon);
+    },
+
+    //Apply mega evolution effects, or aegislash/meloetta
+    updatePokemonOnFormeChange: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var tokens3 = tokens[3].split(', ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var newPokeName = tokens3[0];
+        var battleside = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+        } else {
+            battleside = this.state.p2;
+        }
+        //Note: crashes when the bot mega evolves.
+        logger.info(pokeName + " has transformed into " + newPokeName + "!");
+        var pokemon = this.getPokemon(battleside, pokeName, true);
+
+        //apply forme change
+        pokemon.formeChange(newPokeName);
+        this.updatePokemon(battleside, pokemon);
+    },
+    //for ditto exclusively
+    updatePokemonOnTransform: function(tokens) {
+        var tokens2 = tokens[2].split(' ');
+        var tokens3 = tokens[3].split(' ');
+        var player = tokens2[0];
+        var pokeName = tokens2[1];
+        var newPokeName = tokens3[1];
+        var battleside = undefined;
+        var pokemon = undefined;
+
+        if(this.isPlayer(player)) {
+            battleside = this.state.p1;
+            pokemon = this.getPokemon(battleside, pokeName);
+            pokemon.transformInto(this.state.p2.active[0]);
+        } else {
+            battleside = this.state.p2;
+            pokemon = this.getPokemon(battleside, pokeName);
+            pokemon.transformInto(this.state.p1.active[0]);
+        }
+        this.updatePokemon(battleside, pokemon);
+
+    },
+    recieve: function(data) {
+        if (!data) return;
+
+        logger.trace("<< " + data);
+
+        if (data.substr(0, 6) === '|init|') {
+            return this.init(data);
+        }
+        if (data.substr(0, 9) === '|request|') {
+            return this.receiveRequest(JSON.parse(data.substr(9)));
+        }
+
+        var log = data.split('\n');
+        for (var i = 0; i < log.length; i++) {
+            this.log += log[i] + "\n";
+
+            var tokens = log[i].split('|');
+            if (tokens.length > 1) {
+
+                if (tokens[1] === 'tier') {
+                    this.tier = tokens[2];
+                } else if (tokens[1] === 'win') {
+                    this.send("gg", this.id);
+
+                    this.winner = tokens[2];
+                    if (this.winner == account.username) {
+                        logger.info(this.title + ": I won this game");
+                    } else {
+                        logger.info(this.title + ": I lost this game");
+                    }
+
+                    if(program.net === "update" && this.previousState) {
+                        var playerAlive = _.any(this.state.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
+                        var opponentAlive = _.any(this.state.p2.pokemon, function(pokemon) { return pokemon.hp > 0; });
+
+                        if(!playerAlive || !opponentAlive) minimaxbot.train_net(this.previousState, null, (this.winner == account.username));
+                    }
+
+                    if(!program.nosave) this.saveResult();
+
+                    // Leave in two seconds
+                    var battleroom = this;
+                    setTimeout(function() {
+                        battleroom.send("/leave " + battleroom.id);
+                    }, 2000);
+
+                } else if (tokens[1] === 'switch' || tokens[1] === 'drag') {
+                    this.updatePokemonOnSwitch(tokens);
+                } else if (tokens[1] === 'move') {
+                    this.updatePokemonOnMove(tokens);
+                } else if(tokens[1] === 'faint') { //we could outright remove a pokemon...
+                    //record that pokemon has fainted
+                } else if(tokens[1] === 'detailschange' || tokens[1] === 'formechange') {
+                    this.updatePokemonOnFormeChange(tokens);
+                } else if(tokens[1] === '-transform') {
+                    this.updatePokemonOnTransform(tokens);
+                } else if(tokens[1] === '-damage') { //Error: not getting to here...
+                    this.updatePokemonOnDamage(tokens);
+                } else if(tokens[1] === '-heal') {
+                    this.updatePokemonOnDamage(tokens);
+                } else if(tokens[1] === '-boost') {
+                    this.updatePokemonOnBoost(tokens, true);
+                } else if(tokens[1] === '-unboost') {
+                    this.updatePokemonOnBoost(tokens, false);
+                } else if(tokens[1] === '-setboost') {
+                    this.updatePokemonSetBoost(tokens);
+                } else if(tokens[1] === '-restoreboost') {
+                    this.updatePokemonRestoreBoost(tokens);
+                } else if(tokens[1] === '-start') {
+                    this.updatePokemonStart(tokens, true);
+                } else if(tokens[1] === '-end') {
+                    this.updatePokemonStart(tokens, false);
+                } else if(tokens[1] === '-fieldstart') {
+                    this.updateField(tokens, true);
+                } else if(tokens[1] === '-fieldend') {
+                    this.updateField(tokens, false);
+                } else if(tokens[1] === '-weather') {
+                    this.updateWeather(tokens);
+                } else if(tokens[1] === '-sidestart') {
+                    this.updateSideCondition(tokens, true);
+                } else if(tokens[1] === '-sideend') {
+                    this.updateSideCondition(tokens, false);
+                } else if(tokens[1] === '-status') {
+                    this.updatePokemonStatus(tokens, true);
+                } else if(tokens[1] === '-curestatus') {
+                    this.updatePokemonStatus(tokens, false);
+                } else if(tokens[1] === '-item') {
+                    this.updatePokemonOnItem(tokens, true);
+                } else if(tokens[1] === '-enditem') {
+                    this.updatePokemonOnItem(tokens, false);
+                } else if(tokens[1] === '-ability') {
+                    //relatively situational -- important for mold breaker/teravolt, etc.
+                    //needs to be recorded so that we don't accidentally lose a pokemon
+
+                    //We don't actually care about the rest of these effects, as they are merely visual
+                } else if(tokens[1] === '-supereffective') {
+
+                } else if(tokens[1] === '-crit') {
+
+                } else if(tokens[1] === '-singleturn') { //for protect. But we only care about damage...
+
+                } else if(tokens[1] === 'c') {//chat message. ignore. (or should we?)
+
+                } else if(tokens[1] === '-activate') { //protect, wonder guard, etc.
+
+                } else if(tokens[1] === '-fail') {
+
+                } else if(tokens[1] === '-immune') {
+
+                } else if(tokens[1] === 'message') {
+
+                } else if(tokens[1] === 'cant') {
+
+                } else if(tokens[1] === 'leave') {
+
+                } else if(tokens[1]) { //what if token is defined
+                    logger.info("Error: could not parse token '" + tokens[1] + "'. This needs to be implemented");
+                }
+
+            }
+        }
+    },
+    saveResult: function() {
+        // Save game data to data base
+        game = {
+            "title": this.title,
+            "id": this.id,
+            "win": (this.winner == account.username),
+            "date": new Date(),
+            "decisions": JSON.stringify(this.decisions),
+            "log": this.log,
+            "tier": this.tier
+        };
+        db.insert(game, function(err, newDoc) {
+            logger.info("Saved result of " + newDoc.title + " to database.");
+        });
+    },
+    receiveRequest: function(request) {
+        if (!request) {
+            this.side = '';
+            return;
+        }
+
+        if (request.side) this.updateSide(request.side, true);
+
+        if (request.active) logger.info(this.title + ": I need to make a move.");
+        if (request.forceSwitch) logger.info(this.title + ": I need to make a switch.");
+
+        if (request.active || request.forceSwitch) this.makeMove(request);
+    },
+
+    //note: we should not be recreating pokemon each time
+    //is this redundant?
+    updateSide: function(sideData) {
+        if (!sideData || !sideData.id) return;
+        logger.info("Starting to update my side data.");
+        for (var i = 0; i < sideData.pokemon.length; ++i) {
+            var pokemon = sideData.pokemon[i];
+
+            var details = pokemon.details.split(",");
+            var name = details[0].trim();
+            var level = parseInt(details[1].trim().substring(1));
+            var gender = details[2] ? details[2].trim() : null;
+
+            var template = {
+                name: name,
+                moves: pokemon.moves,
+                ability: Abilities[pokemon.baseAbility].name,
+                evs: {
+                    hp: 85,
+                    atk: 85,
+                    def: 85,
+                    spa: 85,
+                    spd: 85,
+                    spe: 85
+                },
+                ivs: {
+                    hp: 31,
+                    atk: 31,
+                    def: 31,
+                    spa: 31,
+                    spd: 31,
+                    spe: 31
+                },
+                item: (!pokemon.item || pokemon.item === '') ? '' : Items[pokemon.item].name,
+                level: level,
+                active: pokemon.active,
+                shiny: false
             };
 
-            // Determine if we can switch pokemon
-            var canswitch = false;
-            if(this.request.active[0].trapped || this.request.active[0].maybeTrapped) { canswitch = false; } // Trapped
-            else {
-                canswitch = _.any(this.request.side.pokemon, function(pokemon) {
-                    return pokemon.condition.indexOf("fnt") < 0 && !pokemon.active;
-                });
+            //keep track of old pokemon
+            var oldPokemon = this.state.p1.pokemon[i];
+
+            // Initialize pokemon
+            this.state.p1.pokemon[i] = new BattlePokemon(template, this.state.p1);
+            this.state.p1.pokemon[i].position = i;
+
+            // Update the pokemon object with latest stats
+            for (var stat in pokemon.stats) {
+                this.state.p1.pokemon[i].baseStats[stat] = pokemon.stats[stat];
+            }
+            // Update health/status effects, if any
+            var condition = pokemon.condition.split(/\/| /);
+            this.state.p1.pokemon[i].hp = parseInt(condition[0]);
+            if(condition.length > 2) {//add status condition
+                this.state.p1.pokemon[i].setStatus(condition[2]); //necessary?
             }
 
-            for(var i = 0; i < moves.length; ++i) {
-                logger.info(moves[i].id + ": " + moves[i].move);
+            // Keep old boosts
+            this.state.p1.pokemon[i].boosts = oldPokemon.boosts;
+
+            // Keep old volatiles
+            this.state.p1.pokemon[i].volatiles = oldPokemon.volatiles;
+
+            if (pokemon.active) {
+                this.state.p1.active = [this.state.p1.pokemon[i]];
+                this.state.p1.pokemon[i].isActive = true;
             }
-            var battleroom = this;
-            var choice = undefined;
-            //Find light screen reflect, or tailwind, and make sure they aren't already up
-            choice = _.find(moves, function(move) {
-                //TODO: we might not necessarily be p1
-                //TODO: the pokemon might fail at using the move -- have to apply other checks
-                if(((move.id === "reflect" || move.id === "lightscreen" ||
-                     move.id === "tailwind") &&
-                    !battleroom.state.p1.getSideCondition(move))) {
-                    decision.reason = move.move + " protects our side of the field.";
-                    //assume that we successfully bring up the move
-                    battleroom.state.p1.addSideCondition(move, battleroom.state.p1);
-                    return true;
-                } else {
-                    return false;
-                }
-            });
-            //Find entry hazard: stealth rock, spikes, toxic spikes, or sticky web
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    //TODO: we might not necessarily be p2
-                    //TODO: the pokemon might fail at using the move -- have to apply other checks
-                    if(((move.id === "stealthrock" || move.id === "spikes" ||
-                         move.id === "toxicspikes" || move.id === "stickyweb")
-                        && !battleroom.state.p2.getSideCondition(move))) {
-                        decision.reason = move.move + " is an entry hazard.";
-                        battleroom.state.p2.addSideCondition(move, battleroom.state.p1);
-                        return true;
-                    } else {
-                        return false;
+
+            // TODO(rameshvarun): Somehow parse / load in current hp and status conditions
+        }
+
+        // Enforce that the active pokemon is in the first slot
+        this.state.p1.pokemon = _.sortBy(this.state.p1.pokemon, function(pokemon) { return pokemon.isActive ? 0 : 1 });
+
+        this.side = sideData.id;
+        this.oppSide = (this.side === "p1") ? "p2" : "p1";
+        logger.info(this.title + ": My current side is " + this.side);
+    },
+    makeMove: function(request) {
+        var room = this;
+
+        setTimeout(function() {
+            if(program.net === "update") {
+                if(room.previousState != null) minimaxbot.train_net(room.previousState, room.state);
+                room.previousState = clone(room.state);
+            }
+
+            var decision = BattleRoom.parseRequest(request);
+
+            // Use specified algorithm to determine resulting choice
+            var result = undefined;
+            if(decision.choices.length == 1) result = decision.choices[0];
+            else if(program.algorithm === "minimax") result = minimaxbot.decide(clone(room.state), decision.choices);
+            else if(program.algorithm === "random") result = randombot.decide(clone(room.state), decision.choices);
+
+            room.decisions.push(result);
+            room.send("/choose " + BattleRoom.toChoiceString(result, room.state.p1) + "|" + decision.rqid, room.id);
+        }, 5000);
+    },
+    // Static class methods
+    extend: {
+        toChoiceString: function(choice, battleside) {
+            if (choice.type == "move") {
+                if(battleside && battleside.active[0].canMegaEvo) //mega evolve if possible
+                    return "move " + choice.id + " mega";
+                else
+                    return "move " + choice.id;
+            } else if (choice.type == "switch") {
+                return "switch " + (choice.id + 1);
+            }
+        },
+        parseRequest: function(request) {
+            var choices = [];
+
+            if(!request) return choices; // Empty request
+            if(request.wait) return choices; // This player is not supposed to make a move
+
+            // If we can make a move
+            if (request.active) {
+                _.each(request.active[0].moves, function(move) {
+                    if (!move.disabled) {
+                        choices.push({
+                            "type": "move",
+                            "id": move.id
+                        });
                     }
                 });
             }
-            //Find status effect: thunder wave, toxic, willowisp, glare, nuzzle
-            //must perform check for what status the opponent has...
 
-            //Find recovery move: soft-boiled, recover, synthesis, moonlight, if our hp is low enough
-            //...determining of hp is low enough might be challenging
-
-            //Find super effective move with STAB
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    var moveData = Tools.getMove(move.id);
-                    var supereffective = Tools.getEffectiveness(moveData,
-                                                                battleroom.oppPokemon) > 0
-                        && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick")
-                        && battleroom.activePokemon.getTypes().indexOf(moveData.type) >= 0
-                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
-                    if(supereffective) decision.reason = move.move + " is supereffective against the opponent and has STAB.";
-                    return supereffective;
-                });
-            }
-            //Find super effective move
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    var moveData = Tools.getMove(move.id);
-                    var supereffective = Tools.getEffectiveness(moveData,
-                                                                battleroom.oppPokemon) > 0
-                        && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick")
-                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
-                    if(supereffective) decision.reason = move.move + " is supereffective against the opponent.";
-                    return supereffective;
+            // Switching options
+            var trapped = (request.active) ? (request.active[0].trapped || request.active[0].maybeTrapped) : false;
+            var canSwitch = request.forceSwitch || !trapped;
+            if (canSwitch) {
+                _.each(request.side.pokemon, function(pokemon, index) {
+                    if (pokemon.condition.indexOf("fnt") < 0 && !pokemon.active) {
+                        choices.push({
+                            "type": "switch",
+                            "id": index
+                        });
+                    }
                 });
             }
 
-            // Potentially switch out
-            if(!choice && canswitch) {
-                var shouldSwitch = _.any(this.oppPokemon.getTypes(), function(oppType) {
-                    return Tools.getEffectiveness(oppType, battleroom.activePokemon.getTypes()) > 0 && Tools.getImmunity(oppType, battleroom.oppPokemon.getTypes());
-                }) && this.makeSwitch(this.request.rqid, this.request.side.pokemon, true);
-                if(shouldSwitch) {
-                    choice = "switch";
-                    decision.reason = this.oppPokemon.name + " is super effective against " + this.activePokemon.name;
-                }
-            }
-
-            //Find move with STAB
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    var moveData = Tools.getMove(move.id);
-                    var goodMove = Tools.getEffectiveness(moveData,
-                                                          battleroom.oppPokemon) === 0
-                        && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick")
-                        && battleroom.activePokemon.getTypes().indexOf(moveData.type) >= 0
-                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
-                    if(goodMove) decision.reason = move.move + " has the same type attack bonus (STAB).";
-                    return goodMove;
-                });
-            }
-            //Find normally effective move.
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    var moveData = Tools.getMove(move.id);
-                    var supereffective = Tools.getEffectiveness(moveData,
-                                                                battleroom.oppPokemon) === 0
-                        && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick")
-                        && Tools.getImmunity(moveData.type, battleroom.oppPokemon.getTypes());
-                    if(supereffective) decision.reason = move.move + " is reasonably effective against the opponent.";
-                    return supereffective;
-                });
-            }
-            //Find less effective move.
-            if(!choice) {
-                choice = _.find(moves, function(move) {
-                    var moveData = Tools.getMove(move.id);
-                    var supereffective = Tools.getEffectiveness(moveData,
-                                                                battleroom.oppPokemon) < 0
-                        && (moveData.basePower > 0 || moveData.id === "return" ||
-                            moveData.id === "grassknot" || moveData.id === "lowkick");
-                    if(supereffective) decision.reason = move.move + " is not very effective against the opponent.";
-                    return supereffective;
-                });
-            }
-            //Choose random move.
-            if(!choice) {
-                choice = moves[Math.floor(Math.random()*moves.length)];
-                decision.reason = "Could not satisfy other constraints.";
-            }
-
-            // Push result to decision log
-            decision.choice = choice;
-            decisionslogger.info("Decision: " + JSON.stringify(decision));
-            this.decisions.push(decision);
-
-            if(choice != "switch") {
-                if(battleroom.activePokemon.canMegaEvo) //mega evolve if possible
-    	           this.send("/choose move " + choice.move + " mega|" + rqid,this.id);
-                else
-                    this.send("/choose move " + choice.move + "|" + rqid,this.id);
-            } else {
-                this.makeSwitch(this.request.rqid, this.request.side.pokemon);
-            }
-
-	},
-	makeSwitch: function(rqid, pokemon, isbetter) {
-		var decision = {
-			prompt: "I need to switch to a pokemon that opposes " + this.oppPokemon.name + " - " + JSON.stringify(this.oppPokemon.getTypes()),
-			choices: [],
-			choice: "",
-			reason: ""
-		};
-
-		var choices = [];
-		for(var i = 0; i < pokemon.length; ++i) {
-			if(pokemon[i].condition.indexOf("fnt") < 0 && !pokemon[i].active) {
-				decision.choices.push(this.state.p1.pokemon[i].name + " - " + JSON.stringify(this.state.p1.pokemon[i].getTypes()));
-				choices.push(i);
-			}
-		}
-
-		var battleroom = this;
-		var choice = undefined; // Pick best pokemon
-
-		// Find Pokemon that is immune to both of the opponent Pokemon’s types
-		choice = _.find(choices, function(i) {
-			var pokemon = battleroom.state.p1.pokemon[i];
-			var immune = _.all(battleroom.oppPokemon.getTypes(), function(type) {
-				return !Tools.getImmunity(type, pokemon);
-			});
-			if(immune) decision.reason = "We are immune to the opposing pokemon type.";
-			return immune;
-		});
-
-		// Find Pokemon that resists both of opponents types
-		// TODO(rameshvarun): Sort by amount of resistivity
-		if(!choice) {
-			choice = _.find(choices, function(i) {
-				var pokemon = battleroom.state.p1.pokemon[i];
-				var canresist = _.all(battleroom.oppPokemon.getTypes(), function(type) {
-					return Tools.getEffectiveness(type, pokemon) < 0;
-				});
-				if(canresist) decision.reason = "We can resist both opposing pokemon types.";
-				return canresist;
-			});
-		}
-
-		// Choose pokemon that can deal super effective damage to the oppenents pokemon
-		// TODO(rameshvarun): Sort by how super effective
-		if(!choice) {
-			choice = _.find(choices, function(i) {
-				var pokemon = battleroom.state.p1.pokemon[i];
-				var moveName = "";
-				var supereffective = _.any(pokemon.getMoves(), function(move) {
-					moveName = move.move;
-					var moveData = Tools.getMove(move.id);
-					return Tools.getEffectiveness(moveData, battleroom.oppPokemon) > 0 && moveData.basePower > 0 && Tools.getImmunity(moveData.type, battleroom.oppPokemon);
-				});
-				if(supereffective) decision.reason = moveName + " is supereffective against the opponent.";
-				return supereffective;
-			});
-		}
-
-        //Choose pokemon that receives neutral damage from opponent
-		if(!choice) {
-			choice = _.find(choices, function(i) {
-				var pokemon = battleroom.state.p1.pokemon[i];
-				var receiveNeutral = _.all(battleroom.oppPokemon.getTypes(), function(type) {
-					return Tools.getEffectiveness(type, pokemon) <= 0;
-				});
-				if(receiveNeutral) decision.reason = "We do not take super effective damage from both of the types.";
-				return receiveNeutral;
-			});
-		}
-
-        // In this special case, dont actually execute a move - just check if there is a better pokemon
-        if(isbetter) return (choice != null);
-
-		// If none of the Pokemon satisfy any of the above properties, choose the next Pokemon from the possible Pokemon that can be chosen.
-		if(!choice) {
-			choice = choices[0];
-			decision.reason = "Could not satisfy other constraints.";
-		}
-		decision.choice = battleroom.state.p1.pokemon[choice].name;
-		this.send("/choose switch " + (choice + 1) + "|" + rqid, this.id);
-
-		// Save to decision log
-		decisionslogger.info("Decision: " + JSON.stringify(decision));
-		this.decisions.push(decision);
-	},
-	notifyRequest: function() {
-            /*for(key in this.request) {
-                logger.info("Key: " + key);
-                logger.info(this.request[key]);
-            }*/
-		switch (this.request.requestType) {
-			case 'move':
-				logger.info(this.title + ": I need to make a move.");
-				this.makeMove(this.request.rqid, this.request.active[0].moves);
-				break;
-			case 'switch':
-				logger.info(this.title + ": I need to make a switch.");
-				this.makeSwitch(this.request.rqid, this.request.side.pokemon);
-				break;
-			case 'team':
-				logger.info(this.title + ": I need to pick my team order.");
-				break;
-		}
-	}
+            return {
+                rqid: request.rqid,
+                choices: choices
+            };
+        }
+    }
 });
+module.exports = BattleRoom;
+
+var minimaxbot = require("./bots/minimaxbot");
+var greedybot = require("./bots/greedybot");
+var randombot = require("./bots/randombot");

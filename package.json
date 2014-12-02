@@ -3,6 +3,7 @@
   "description": "AI bot for playing Pokemon Showdown.",
   "dependencies": {
     "commander": "2.x",
+    "convnetjs": "^0.3.0",
     "express": "^4.10.0",
     "jsclass": "4.x",
     "log4js": "0.6.21",
@@ -12,5 +13,8 @@
     "sockjs-client-ws": "0.1.0",
     "sugar": "^1.4.1",
     "underscore": "1.x"
+  },
+  "scripts": {
+    "start": "bot.js"
   }
 }

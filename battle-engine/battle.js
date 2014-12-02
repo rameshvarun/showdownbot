@@ -14,6 +14,11 @@
 require('sugar');
 require('./globals');
 
+// Circular, recursive clone
+var clone = require("./../clone");
+
+var _ = require("underscore");
+
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
@@ -105,17 +110,6 @@ Battle = (function () {
 	Battle.prototype.rqid = 0;
 	Battle.prototype.lastMoveLine = 0;
 	Battle.prototype.reportPercentages = false;
-
-	Battle.prototype.toString = function () {
-		var data = ''
-		data += 'Turn: ' + Battle.prototype.turn;
-		data += '\nPlayer 1: ' + Battle.prototype.p1 + ' Player2: ' + Battle.prototype.p2;
-		data += '\nWeather: ' + Battle.prototype.weather + ' Terrain: ' + Battle.prototype.terrain;
-		data += '\nLastMove: ' + Battle.prototype.lastMove;
-		data += '\nActive: ' + Battle.prototype.activePokemon + ' using ' + Battle.prototype.activeMove + ' on ' + Battle.prototype.activeTarget;
-		data += '\n';
-		return data;
-	};
 
 	// Psuedo-random generator
 	Battle.prototype.random = function (m, n) {
@@ -1162,10 +1156,8 @@ Battle = (function () {
 			// need two players to start
 			return;
 		}
-
 		this.p2.emitRequest({side: this.p2.getData()});
 		this.p1.emitRequest({side: this.p1.getData()});
-
 		if (this.started) {
 			this.makeRequest();
 			this.isActive = true;
@@ -2062,6 +2054,7 @@ Battle = (function () {
 		return false;
 	};
 	Battle.prototype.go = function () {
+            console.log("Implementing the choices that were selected by the players...");
 		this.add('');
 		if (this.currentRequest) {
 			this.currentRequest = '';
@@ -2452,7 +2445,6 @@ Battle = (function () {
 			this.p1.isActive = true;
 			this.add('player', 'p1', this.p1.name, avatar);
 		}
-		this.start();
 		return true;
 	};
 
@@ -2544,7 +2536,69 @@ Battle = (function () {
 				this.send('update', this.log.slice(logPos));
 			}
 		}
-	}
+	};
+
+	Battle.prototype.toString = function () {
+	    // TODO: Need better toString function to understand battle
+
+	    function formatPokemon(pokemon) {
+		var text = "";
+		text += pokemon.name + " " + pokemon.hp + "/" + pokemon.maxhp;
+                if(pokemon.status)
+                    text += " " + pokemon.status;
+                if(pokemon.item)
+                    text += " @ " + pokemon.item;
+                text += ", L" + (pokemon.level?pokemon.level:'??');
+                text += ".  Ability: " + (pokemon.ability?pokemon.ability:'???');
+                text += ".  Volatiles: " + JSON.stringify(_.keys(pokemon.volatiles));
+		text += "  Boosts: " + JSON.stringify(_.pick(pokemon.boosts, function(value, key, object) {
+		    return value != 0;
+		}));
+                text += "  Stats: " + JSON.stringify(pokemon.baseStats);
+                if(pokemon.isActive) {
+                    text += ". I'm Active!";
+                }
+		return text;
+	    }
+
+	    function requestType(request) {
+		if(request.wait) return "Wait";
+		if(request.active) return "Any Move";
+		if(request.forceSwitch) return "Force Switch";
+		return "Unkown Type";
+	    }
+
+	    var data = ''
+	    data += 'Turn: ' + this.turn + "\n";
+	    data += "\n";
+
+	    data += "Weather: " + (this.getWeather().id === "" ? "None" : this.getWeather().name) + "\n";
+	    data += "PsuedoWeathers: " + JSON.stringify(_.keys(this.pseudoWeather)) + "\n";
+	    data += "\n";
+
+	    data += this.p1.name + "\n";
+		data += "\tRequest Type: " + requestType(this.p1.request) + "\n";
+	    data += "\Active Pokemon: " + formatPokemon(this.p1.active[0]) + "\n";
+            data += "\tAll Pokemon:\n";
+            for(var i = 0; i < this.p1.pokemon.length; i++) {
+                data += "\t\t" + formatPokemon(this.p1.pokemon[i]) + "\n";
+            }
+
+	    data += "\tside conditions:" + JSON.stringify(_.keys(this.p1.sideConditions)) + "\n";
+	    data += "\n";
+
+	    data += this.p2.name + "\n";
+		data += "\tRequest Type: " + requestType(this.p2.request) + "\n";
+	    data += "\tactive:" + formatPokemon(this.p2.active[0]) + "\n";
+            data += "\tAll Pokemon:\n";
+            for(var i = 0; i < this.p2.pokemon.length; i++) {
+                data += "\t\t" + formatPokemon(this.p2.pokemon[i]) + "\n";
+            }
+
+	    data += "\tside conditions:" + JSON.stringify(_.keys(this.p2.sideConditions)) + "\n";
+	    data += "\n";
+	    return data;
+	};
 
 	return Battle;
 })();

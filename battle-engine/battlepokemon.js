@@ -1102,6 +1102,7 @@ BattlePokemon = (function () {
 		this.battle = null;
 		this.side = null;
 	};
+
 	return BattlePokemon;
 })();
 

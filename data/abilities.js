@@ -140,7 +140,7 @@ exports.BattleAbilities = {
 				for (var j = 0; j < targets[i].moveset.length; j++) {
 					var move = this.getMove(targets[i].moveset[j].move);
 					if (move.category !== 'Status' && (this.getImmunity(move.type, pokemon) && this.getEffectiveness(move.type, pokemon) > 0 || move.ohko)) {
-						this.add('-message', pokemon.name + ' shuddered! (placeholder)');
+						this.add('-activate', pokemon, 'ability: Anticipation');
 						return;
 					}
 				}
@@ -1669,9 +1669,6 @@ exports.BattleAbilities = {
 		desc: "If this Pokemon is Arceus, its type and sprite change to match its held Plate. Either way, this Pokemon is holding a Plate, the Plate cannot be taken (such as by Trick or Thief). This ability cannot be Skill Swapped, Role Played or Traced.",
 		shortDesc: "If this Pokemon is Arceus, its type changes to match its held Plate.",
 		// Multitype's type-changing itself is implemented in statuses.js
-		onTakeItem: function (item) {
-			if (item.onPlate) return false;
-		},
 		id: "multitype",
 		name: "Multitype",
 		rating: 4,
@@ -1739,12 +1736,11 @@ exports.BattleAbilities = {
 		onUpdate: function (pokemon) {
 			if (pokemon.volatiles['attract']) {
 				pokemon.removeVolatile('attract');
-				this.add("-message", pokemon.name + " got over its infatuation. (placeholder)");
+				this.add('-end', pokemon, 'move: Attract');
 			}
 			if (pokemon.volatiles['taunt']) {
 				pokemon.removeVolatile('taunt');
-				// TODO: Research proper message.
-				this.add("-message", pokemon.name + " got over its taunt. (placeholder)");
+				// Taunt's volatile already sends the -end message when removed
 			}
 		},
 		onImmunity: function (type, pokemon) {
@@ -2275,6 +2271,7 @@ exports.BattleAbilities = {
 	"scrappy": {
 		desc: "This Pokemon has the ability to hit Ghost-type Pokemon with Normal-type and Fighting-type moves. Effectiveness of these moves takes into account the Ghost-type Pokemon's other weaknesses and resistances.",
 		shortDesc: "This Pokemon can hit Ghost-types with Normal- and Fighting-type moves.",
+		onModifyMovePriority: -5,
 		onModifyMove: function (move) {
 			if (move.type in {'Fighting':1, 'Normal':1}) {
 				move.affectedByImmunities = false;
@@ -2289,7 +2286,7 @@ exports.BattleAbilities = {
 		desc: "This Pokemon's moves have their secondary effect chance doubled. For example, if this Pokemon uses Ice Beam, it will have a 20% chance to freeze its target.",
 		shortDesc: "This Pokemon's moves have their secondary effect chance doubled.",
 		onModifyMove: function (move) {
-			if (move.secondaries) {
+			if (move.secondaries && move.id !== 'secretpower') {
 				this.debug('doubling secondary chance');
 				for (var i = 0; i < move.secondaries.length; i++) {
 					move.secondaries[i].chance *= 2;
@@ -2776,7 +2773,12 @@ exports.BattleAbilities = {
 		desc: "This Pokemon immediately passes its item to an ally after their item is consumed.",
 		shortDesc: "This Pokemon passes its item to an ally after their item is consumed.",
 		onAllyAfterUseItem: function (item, pokemon) {
-			var sourceItem = this.effectData.target.takeItem();
+			var sourceItem = this.effectData.target.getItem();
+			var noSharing = sourceItem.onTakeItem && sourceItem.onTakeItem(sourceItem, pokemon) === false;
+			if (!sourceItem || noSharing) {
+				return;
+			}
+			sourceItem = this.effectData.target.takeItem();
 			if (!sourceItem) {
 				return;
 			}
@@ -3233,7 +3235,6 @@ exports.BattleAbilities = {
 			onStart: function (pokemon) {
 				if (pokemon.formeChange('Darmanitan-Zen')) {
 					this.add('-formechange', pokemon, 'Darmanitan-Zen');
-					this.add('-message', 'Zen Mode triggered! (placeholder)');
 				} else {
 					return false;
 				}
@@ -3241,7 +3242,6 @@ exports.BattleAbilities = {
 			onEnd: function (pokemon) {
 				if (pokemon.formeChange('Darmanitan')) {
 					this.add('-formechange', pokemon, 'Darmanitan');
-					this.add('-message', 'Zen Mode ended! (placeholder)');
 				} else {
 					return false;
 				}

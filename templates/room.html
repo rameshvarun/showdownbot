@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1>{{game.title}}</h1>
+
+{{ format(game.state.toString()) | safe }}
+<div id="tree">
+</div>
+
+<script type="text/javascript">
+	var lastDecision = {{ stringify(game.decisions[game.decisions.length - 1]) | safe }};
+	var $tree = $("#tree");
+	$tree.append("<h2>Decision: " + lastDecision.type + " " + lastDecision.id + "</h2>");
+
+	
+	function panel(title, node, selected) {
+		if(!node) return "";
+
+		var html = "";
+		var panel_type = (selected) ? 'panel-success' : 'panel-default';
+		html += "<div class='panel " + panel_type + "'>";
+		html += "<div class='panel-heading'>";
+		html += title;
+		html += "<span class='glyphicon glyphicon-chevron-down pull-right' aria-hidden='true'></span>"
+		html += "</div>";
+
+		html += "<div class='panel-body'>";
+		html += "Type: " + node.type;
+		html += ", Value: " + node.value;
+		html += ", Depth: " + node.depth;
+
+		html += "<br><br>";
+		html += node.state.replace(/\n/g, "<br>").replace(/\t/g, "&nbsp;&nbsp;&nbsp;&nbsp;");
+		html += "<br>";
+
+		for(var i = 0; i < node.choices.length; ++i) {
+			var pronoun = (node.type == "max") ? "I" : "They";
+			var title = pronoun + " " + node.choices[i].type + " " + node.choices[i].id;
+
+			var sel = selected && node.action && (node.action.id == node.choices[i].id);
+			html += panel(title, node.children[i], sel);
+		}
+
+		html += "</div>";
+		html += "</div>";
+		return html;
+	}
+
+	
+	$tree.append(panel("START", lastDecision.tree, true));
+
+	$(".glyphicon-chevron-down").click(function() {
+		$(this).parent().parent().children(".panel-body").slideToggle();
+	});
+
+	$(".glyphicon-chevron-down").trigger("click");
+</script>
+{% endblock %}
