@@ -260,7 +260,7 @@ var decide = module.exports.decide = function(battle, choices) {
     };
 }
 
-var GAME_END_REWARD = module.exports.GAME_END_REWARD = 1000;
+var GAME_END_REWARD = module.exports.GAME_END_REWARD = 1000000;
 var DISCOUNT = module.exports.DISCOUNT = 0.98;
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
