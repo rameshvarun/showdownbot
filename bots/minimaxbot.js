@@ -12,6 +12,7 @@ var _ = require("underscore");
 var BattleRoom = require("./../battleroom");
 
 var randombot = require("./randombot");
+var greedybot = require("./greedybot");
 
 var clone = require("./../clone");
 
@@ -212,7 +213,13 @@ function getFeatures(battle) {
         }, 0);
 
         //stat boosts (note: some stats don't really matter for a pokemon, like physical attacks)
-        features.myStats = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
+        for(var i = 0; i < BOOSTS.length; i++) {
+            if(BOOSTS[i] !== 'accuracy' && BOOSTS[i] !== 'evasion') {
+                features['my' + BOOSTS[i]] = battle.p1.active[0].boosts[BOOSTS[i]];
+                features['their' + BOOSTS[i]] = battle.p2.active[0].boosts[BOOSTS[i]];
+            }
+        }
+        /*features.myStats = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
             if (pokemon.hp)
                 return memo;
             var numStats = 0;
@@ -231,7 +238,7 @@ function getFeatures(battle) {
                     numStats += pokemon.boosts[stat];
             }
             return memo + numStats;
-        }, 0);
+        }, 0);*/
 
         //substitute/etc.
         features.mySub = ('substitute' in battle.p1.active[0].volatiles ? 1 : 0);
@@ -250,6 +257,7 @@ function getFeatures(battle) {
         //-damage potential. ideally we want to deal more damage to opponent than vice versa
         //if we can kill the opponent right now then maybe that's something we should do
         //instead of letting the opponent set up/get killed ourselves.
+        features.speedDiff = battle.p1.active[0].speed - battle.p2.active[0].speed;
 
         //overall pokemon variety. Overall we want a diverse set of pokemon.
         //-types: want a variety of types to be good defensively vs. opponents
@@ -257,7 +265,6 @@ function getFeatures(battle) {
         //-stat spreads: we don't really want all physical or all special attackers.
         //     also, our pokemon should be able to fulfill different roles, so we want
         //     to keep a tanky pokemon around or a wall-breaker around
-
     }
 
     return features;
@@ -268,14 +275,16 @@ var weights = {
     theirSum: -50,
     myAlive: 20, //alive pokemon is next most important
     theirAlive: -20,
-    myStatus: 4,
-    theirStatus: -4,
-    myHazards: 1,
-    theirHazards: -1,
-    myVolatiles: 2,
-    theirVolatiles: -2,
-    myStats: 10,
-    theirStatus: -10,
+    myatk: 10,
+    mydef: 2,
+    myspa: 10,
+    myspd: 2,
+    myspe: 4,
+    theiratk: -10,
+    theirdef: -2,
+    theirspa: -10,
+    theirspd: -2,
+    theirspe: -4,
     mySub: 5,
     theirSub: -5,
     myItems: 4,
@@ -334,7 +343,7 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 		children : [],
 		action : null,
 		state : battle.toString()
-	}
+	};
 
 	// Look for win / loss
 	var playerAlive = _.any(battle.p1.pokemon, function(pokemon) { return pokemon.hp > 0; });
@@ -352,7 +361,15 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 			return opponentTurn(battle, depth, alpha, beta, null);
 		}
 		var choices = (givenchoices) ? givenchoices : BattleRoom.parseRequest(battle.p1.request).choices;
-                logger.info("Our choices: " + choices);
+            //sort choices
+            choices = _.sortBy(choices, function(choice) {
+                var priority = greedybot.getPriority(battle, choice, battle.p1, battle.p2);
+                choice.priority = priority;
+                return -priority;
+            });
+            for(var i = 0; i < choices.length; i++) {
+                logger.info(choices[i].id + " with priority " + choices[i].priority);
+            }
 	        //choices = _.sample(choices, 1); // For testing
                 //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
                 //Essentially, the greedy algorithm
@@ -417,6 +434,17 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 		node.value = eval(battle);
 		return node;
 	}
+
+    //sort choices
+    choices = _.sortBy(choices, function(choice) {
+        var priority = greedybot.getPriority(battle, choice, battle.p2, battle.p1);
+        choice.priority = priority;
+        return -priority;
+    });
+    for(var i = 0; i < choices.length; i++) {
+        logger.info(choices[i].id + " with priority " + choices[i].priority);
+    }
+
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");

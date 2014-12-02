@@ -118,6 +118,13 @@ var movePriority = module.exports.movePriority = function(battle, move, p1, p2) 
 
 };
 
+var getPriority = module.exports.getPriority = function(battle, choice, p1, p2) {
+    if(choice.type === "switch")
+        return switchPriority(battle, choice, p1, p2);
+    else
+        return movePriority(battle, choice, p1, p2);
+};
+
 var decide = module.exports.decide = function(battle, choices, p1, p2) {
     if(!p1 || !p2) { //if not supplied, assume we are p1
         p1 = battle.p1;
@@ -125,11 +132,7 @@ var decide = module.exports.decide = function(battle, choices, p1, p2) {
     }
 
     var bestChoice = _.max(choices, function(choice) {
-        var priority = 0;
-        if(choice.type === "switch")
-            priority = switchPriority(battle, choice, p1, p2);
-        else
-            priority = movePriority(battle, choice, p1, p2);
+        var priority = getPriority(battle, choice, p1, p2);
         choice.priority = priority;
         return priority;
     });
