@@ -177,7 +177,7 @@ var BattleRoom = new JS.Class({
         pokemon.activeTurns += 1;
         if(!this.isPlayer(player)) { //anticipate more about the Pokemon's moves
             if(pokemon.trueMoves.indexOf(move) < 0) {
-                pokemon.trueMoves.push(toId(move));
+                pokemon.trueMoves.push(move);
                 logger.info("Determined that " + pokeName + " can use " + move);
                 //if we have collected all of the moves, eliminate all other possibilities
                 if(pokemon.trueMoves.length >= 4) {
