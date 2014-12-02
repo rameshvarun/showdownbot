@@ -748,7 +748,7 @@ var BattleRoom = new JS.Class({
             // If we can make a move
             if (request.active) {
                 _.each(request.active[0].moves, function(move) {
-                    if (!move.disabled && move.pp > 0) {
+                    if (!move.disabled) {
                         choices.push({
                             "type": "move",
                             "id": move.id

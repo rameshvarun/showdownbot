@@ -38,10 +38,9 @@ _.each(BOOSTS, function(boost) {
     BATTLE_FEATURES.push("p2_" + boost);
 });
 
-for(var i = 0; i < 6; ++i) {
-    BATTLE_FEATURES.push("p1_" + i + "_hp");
-    BATTLE_FEATURES.push("p2_" + i + "_hp");
-}
+BATTLE_FEATURES.push("p1_hp");
+BATTLE_FEATURES.push("p2_hp");
+
 module.exports.BATTLE_FEATURES = BATTLE_FEATURES;
 
 function featureVector(battle) {
@@ -66,6 +65,17 @@ if(program.net === "create") {
     net = new convnetjs.Net();
     net.makeLayers(layer_defs);
 
+    _.each(net.layers, function(layer) {
+        if(layer.filters) {
+            _.each(layer.filters, function(filter) {
+                if(filter.w) {
+                    var num = filter.w.byteLength / filter.w.BYTES_PER_ELEMENT;
+                    for(var i = 0; i < num; ++i) filter.w.set([0.0], i);
+                }
+            });
+        }
+    });
+
     fs.writeFileSync("network.json", JSON.stringify(net.toJSON()));
     program.net = "update"; // Now that the network is created, it should also be updated
     learnlog.info("Created neural network...");
@@ -79,7 +89,7 @@ module.exports.net = net;
 // If we need to be able to update the network, create a trainer object
 if(program.net === "update") {
     trainer = new convnetjs.Trainer(net, {method: 'adadelta', l2_decay: 0.001,
-        batch_size: 10});
+        batch_size: 1});
     learnlog.trace("Created SGD Trainer");
 }
 
@@ -90,11 +100,26 @@ var train_net = module.exports.train_net = function(battle, newbattle, win) {
 
     var value = undefined;
 
-    if (newbattle == null) value = win ? GAME_END_REWARD : -GAME_END_REWARD;
-    else value = eval(newbattle);
+    if (newbattle == null) {
+        value = win ? GAME_END_REWARD : -GAME_END_REWARD;
 
-    // Apply discount
-    value *= DISCOUNT;
+        // Apply discount
+        value *= DISCOUNT;
+    }
+    else {
+        value = DISCOUNT * eval(newbattle);
+
+        var isAlive = function(pokemon) { return pokemon.hp > 0; };
+        var opponentDied = _.filter(battle.p2.pokemon, isAlive).length - _.filter(newbattle.p2.pokemon, isAlive).length;
+        var playerDied = _.filter(battle.p1.pokemon, isAlive).length - _.filter(newbattle.p1.pokemon, isAlive).length;
+        value += opponentDied * 10;
+        value -= playerDied * 10;
+
+        if(opponentDied > 0) learnlog.info("Rewarded for killing an opponent pokemon.");
+        if(playerDied > 0) learnlog.info("Negative rewarded for losing a pokemon.");
+    }
+
+
 
     var vec = featureVector(battle);
     trainer.train(vec, [value]);
@@ -124,11 +149,15 @@ function getFeatures(battle) {
         features["p2_" + boost] = battle.p2.active[0].boosts[boost];
     });
 
+    // Side health
+    features["p1_hp"] = 0;
+    features["p2_hp"] = 0;
+
     // Per pokemon features
     for(var i = 0; i < 6; ++i) {
         // Pokemon health percentage
-        features["p1_" + i + "_hp"] = (battle.p1.pokemon[i].hp ? battle.p1.pokemon[i].hp : 0) / battle.p1.pokemon[i].maxhp;
-        features["p2_" + i + "_hp"] = (battle.p2.pokemon[i].hp ? battle.p2.pokemon[i].hp : 0) / battle.p2.pokemon[i].maxhp;
+        features["p1_hp"] += (battle.p1.pokemon[i].hp ? battle.p1.pokemon[i].hp : 0) / battle.p1.pokemon[i].maxhp;
+        features["p2_hp"] += (battle.p2.pokemon[i].hp ? battle.p2.pokemon[i].hp : 0) / battle.p2.pokemon[i].maxhp;
     }
 
     if(program.net === "none") {
@@ -289,7 +318,7 @@ var decide = module.exports.decide = function(battle, choices) {
 }
 
 var GAME_END_REWARD = module.exports.GAME_END_REWARD = 1000;
-var DISCOUNT = module.exports.DISCOUNT = 0.9;
+var DISCOUNT = module.exports.DISCOUNT = 0.98;
 
 //TODO: Implement move ordering, which can be based on the original greedy algorithm
 //However, it should have slightly different priorities, such as status effects...
