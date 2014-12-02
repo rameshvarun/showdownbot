@@ -156,6 +156,7 @@ var decide = module.exports.decide = function(battle, choices, p1, p2) {
     logger.info("Move has priority: " + bestChoice.priority);
     return {
         type: bestChoice.type,
-        id: bestChoice.id
+        id: bestChoice.id,
+        priority: bestChoice.priority
     };
 };
