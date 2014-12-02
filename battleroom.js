@@ -781,4 +781,5 @@ var BattleRoom = new JS.Class({
 module.exports = BattleRoom;
 
 var minimaxbot = require("./bots/minimaxbot");
+var greedybot = require("./bots/greedybot");
 var randombot = require("./bots/randombot");
