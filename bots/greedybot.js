@@ -1,7 +1,6 @@
 //Logging
 var log4js = require('log4js');
 var logger = log4js.getLogger("greedy");
-log4js.addAppender(log4js.appenders.file('logs/greedy.log'), 'greedy');
 
 var _ = require("underscore");
 var BattleRoom = require("./../battleroom");
