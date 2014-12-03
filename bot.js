@@ -40,6 +40,16 @@ if(!program.nolog) {
 	log4js.addAppender(log4js.appenders.file('logs/battleside.log'), 'battleside');
 
 	log4js.addAppender(log4js.appenders.file('logs/greedy.log'), 'greedy');
+} else {
+	logger.setLevel("INFO");
+	log4js.configure({
+		appenders : [
+			{
+				type: "console",
+				category: ["bot"]
+			}
+		]
+	});
 }
 
 // Login information for this bot
