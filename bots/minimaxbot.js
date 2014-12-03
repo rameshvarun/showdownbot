@@ -135,7 +135,7 @@ var train_net = module.exports.train_net = function(battle, newbattle, win) {
     fs.writeFileSync("network.json", JSON.stringify(net.toJSON(), undefined, 2));
 }
 
-//TODO: Features should not take into account Unown pokemon. (Doesn't really matter now, but it will...)
+//TODO: Features should not take into account Bulbasaur pokemon. (Doesn't really matter now, but it will...)
 function getFeatures(battle) {
     var features = {};
 
@@ -362,10 +362,10 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
 
 	var choices = BattleRoom.parseRequest(battle.p2.request).choices;
 
-	// Make sure we can't switch to an unown or to a fainted pokemon
+	// Make sure we can't switch to a Bulbasaur or to a fainted pokemon
 	choices = _.reject(choices, function(choice) {
 		if(choice.type == "switch" &&
-                   (battle.p2.pokemon[choice.id].name == "Unown" ||
+                   (battle.p2.pokemon[choice.id].name == "Bulbasaur" ||
                     !battle.p2.pokemon[choice.id].hp)) return true;
 		return false;
 	});
