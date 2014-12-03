@@ -9,20 +9,38 @@ program
 	.option('--algorithm [algorithm]', "Can be 'minimax', 'greedy', or 'random'. ['minimax']", "minimax")
 	.option('--account [file]', "File from which to load credentials. ['account.json']", "account.json")
 	.option('--nosave', "Don't save games to the in-memeory db.")
+	.option('--nolog', "Don't append to log files.")
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server
 var util = require('./util');
 var fs = require('fs');
 
-// Ensure that logging directory exists
-if(!fs.existsSync("./logs")) { fs.mkdirSync("logs") };
-
 // Setup Logging
 var log4js = require('log4js');
 log4js.loadAppender('file');
 var logger = require('log4js').getLogger("bot");
-log4js.addAppender(log4js.appenders.file('logs/bot.log'), 'bot');
+
+if(!program.nolog) {
+	// Ensure that logging directory exists
+	if(!fs.existsSync("./logs")) { fs.mkdirSync("logs") };
+
+	log4js.addAppender(log4js.appenders.file('logs/bot.log'), 'bot');
+
+	log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
+	log4js.addAppender(log4js.appenders.file('logs/learning.log'), 'learning');
+
+	log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
+	log4js.addAppender(log4js.appenders.file('logs/decisions.log'), 'decisions');
+
+	log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
+
+	log4js.addAppender(log4js.appenders.file('logs/battle.log'), 'battle');
+	log4js.addAppender(log4js.appenders.file('logs/battlepokemon.log'), 'battlepokemon');
+	log4js.addAppender(log4js.appenders.file('logs/battleside.log'), 'battleside');
+
+	log4js.addAppender(log4js.appenders.file('logs/greedy.log'), 'greedy');
+}
 
 // Login information for this bot
 var account = JSON.parse(fs.readFileSync(program.account));

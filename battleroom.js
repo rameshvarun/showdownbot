@@ -17,8 +17,6 @@ var db = require("./db");
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battleroom");
 var decisionslogger = require('log4js').getLogger("decisions");
-log4js.addAppender(log4js.appenders.file('logs/battleroom.log'), 'battleroom');
-log4js.addAppender(log4js.appenders.file('logs/decisions.log'), 'decisions');
 
 //battle-engine
 var Battle = require('./battle-engine/battle');

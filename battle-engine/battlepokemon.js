@@ -5,7 +5,6 @@ require('./globals');
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battlepokemon");
-log4js.addAppender(log4js.appenders.file('logs/battlepokemon.log'), 'battlepokemon');
 
 BattlePokemon = (function () {
 	function BattlePokemon(set, side) {

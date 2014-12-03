@@ -4,7 +4,6 @@ require('./globals');
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battleside");
-log4js.addAppender(log4js.appenders.file('logs/battleside.log'), 'battleside');
 
 BattlePokemon = require('./battlepokemon')
 

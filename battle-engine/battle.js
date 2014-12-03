@@ -22,7 +22,6 @@ var _ = require("underscore");
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("battle");
-log4js.addAppender(log4js.appenders.file('logs/battle.log'), 'battle');
 
 BattleSide = require('./battleside');
 

@@ -1,9 +1,7 @@
 // Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("minimax");
-log4js.addAppender(log4js.appenders.file('logs/minimax.log'), 'minimax');
 var learnlog = require('log4js').getLogger("learning");
-log4js.addAppender(log4js.appenders.file('logs/learning.log'), 'learning');
 
 var program = require('commander'); // Program settings
 var fs = require('fs');

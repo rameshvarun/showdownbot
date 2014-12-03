@@ -12,7 +12,6 @@ var _ = require("underscore")
 // Setup Logging
 var log4js = require('log4js');
 var logger = require('log4js').getLogger("webconsole");
-log4js.addAppender(log4js.appenders.file('logs/webconsole.log'), 'webconsole');
 
 var CHALLENGING = false;
 
