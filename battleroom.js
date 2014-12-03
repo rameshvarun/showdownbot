@@ -171,8 +171,19 @@ var BattleRoom = new JS.Class({
             return;
         }
 
-        //update last move (so we don't protect twice in a row)
+        //update last move (doesn't actually affect the bot...)
         pokemon.lastMove = toId(move);
+
+        //if move is protect or detect, update stall counter
+        if('stall' in pokemon.volatiles) {
+            pokemon.volatiles.stall.counter++;
+        }
+        //update status duration
+        if(pokemon.status) {
+            pokemon.statusData.duration = (pokemon.statusData.duration?
+                                           pokemon.statusData.duration+1:
+                                           1);
+        }
         //we are no longer newly switched (so we don't fakeout after the first turn)
         pokemon.activeTurns += 1;
         if(!this.isPlayer(player)) { //anticipate more about the Pokemon's moves
@@ -683,6 +694,9 @@ var BattleRoom = new JS.Class({
             this.state.p1.pokemon[i].hp = parseInt(condition[0]);
             if(condition.length > 2) {//add status condition
                 this.state.p1.pokemon[i].setStatus(condition[2]); //necessary?
+            }
+            if(pokemon.active) { //keep old statusData
+                pokemon.statusData = oldPokemon.statusData;
             }
 
             // Keep old boosts
