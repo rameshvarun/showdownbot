@@ -25,8 +25,8 @@ module.exports = {
   "p1_substitute": 150,
   "p2_substitute": -150,
 
-  "p1_confusion": -2,
-  "p2_confusion": 2,
+  "p1_confusion": -32,
+  "p2_confusion": 32,
 
   "p1_leechseed": -80,
   "p2_leechseed": 80,

@@ -195,6 +195,10 @@ function getFeatures(battle) {
         if(_.contains(STATUSES, battle.p2.pokemon[i].status)) ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
     }
 
+    // Cap sleep count at 1, due to Sleep Cause mod
+    features["p1_slp_count"] = Math.min(features["p1_slp_count"], 1);
+    features["p2_slp_count"] = Math.min(features["p2_slp_count"], 1);
+
     //items: prefer to have items rather than lose them (such as berries, focus sash, ...)
     features.items = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
         return memo + (pokemon.item && pokemon.hp ? 1 : 0);
@@ -381,6 +385,8 @@ function opponentTurn(battle, depth, alpha, beta, playerAction) {
         logger.info(choices[i].id + " with priority " + choices[i].priority);
     }
 
+    // Take top 10 choices, to limit breadth of tree
+    choices = _.take(choices, 10);
 
 	for(var i = 0; i < choices.length; ++i) {
 		logger.trace("Cloning battle...");

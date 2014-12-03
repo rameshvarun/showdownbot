@@ -606,7 +606,7 @@ var BattleRoom = new JS.Class({
             "id": this.id,
             "win": (this.winner == account.username),
             "date": new Date(),
-            "decisions": JSON.stringify(this.decisions),
+            "decisions": "[]", //JSON.stringify(this.decisions),
             "log": this.log,
             "tier": this.tier
         };
