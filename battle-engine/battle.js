@@ -2053,7 +2053,7 @@ Battle = (function () {
 		return false;
 	};
 	Battle.prototype.go = function () {
-            console.log("Implementing the choices that were selected by the players...");
+        	logger.trace("Implementing the choices that were selected by the players...");
 		this.add('');
 		if (this.currentRequest) {
 			this.currentRequest = '';
