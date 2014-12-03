@@ -10,6 +10,8 @@ program
 	.option('--account [file]', "File from which to load credentials. ['account.json']", "account.json")
 	.option('--nosave', "Don't save games to the in-memeory db.")
 	.option('--nolog', "Don't append to log files.")
+        .option('--startchallenging', "Start out challenging, instead of
+requiring a manual activation first.")
 	.parse(process.argv);
 
 var request = require('request'); // Used for making post requests to login server

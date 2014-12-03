@@ -14,6 +14,7 @@ var log4js = require('log4js');
 var logger = require('log4js').getLogger("webconsole");
 
 var CHALLENGING = false;
+if(program.startchallenging) CHALLENGING = true;
 
 var minimaxbot = require("./bots/minimaxbot");
 
