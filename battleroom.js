@@ -609,7 +609,9 @@ var BattleRoom = new JS.Class({
             "tier": this.tier
         };
         db.insert(game, function(err, newDoc) {
-            logger.info("Saved result of " + newDoc.title + " to database.");
+	    if(newDoc) logger.info("Saved result of " + newDoc.title + "
+        to database.");
+	    else logger.error("Error saving result to database.");
         });
     },
     receiveRequest: function(request) {
