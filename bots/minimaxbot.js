@@ -246,6 +246,7 @@ function eval(battle) {
 }
 
 var overallMinNode = {};
+var lastMove = '';
 var decide = module.exports.decide = function(battle, choices) {
     battle.start();
 
@@ -255,6 +256,7 @@ var decide = module.exports.decide = function(battle, choices) {
     logger.info("My action: " + maxNode.action.type + " " + maxNode.action.id);
     if(overallMinNode.action)
         logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
+    lastMove = maxNode.action.id;
     return {
 	type: maxNode.action.type,
 	id: maxNode.action.id,
@@ -307,26 +309,28 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
             for(var i = 0; i < choices.length; i++) {
                 logger.info(choices[i].id + " with priority " + choices[i].priority);
             }
-	        //choices = _.sample(choices, 1); // For testing
-                //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
-                //Essentially, the greedy algorithm
-                //Perhaps then we can increase the depth...
+	    //choices = _.sample(choices, 1); // For testing
+            //TODO: before looping through moves, move choices from array to priority queue to give certain moves higher priority than others
+            //Essentially, the greedy algorithm
+            //Perhaps then we can increase the depth...
 
-		for(var i = 0; i < choices.length; ++i) {
-		    // Try action
-		    var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
-		    node.children.push(minNode);
+	    for(var i = 0; i < choices.length; ++i) {
+                if(choices[i].id === 'wish' && lastMove === 'wish') //don't wish twice in a row
+                    continue;
+		// Try action
+		var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
+		node.children.push(minNode);
 
-		    if(minNode.value != null && isFinite(minNode.value) ) {
-                if(minNode.value > node.value) {
-                    node.value = minNode.value;
-                    node.action = choices[i];
-                                overallMinNode = minNode;
-                }
-                alpha = Math.max(alpha, minNode.value);
-                if(beta <= alpha) break;
-		    }
+		if(minNode.value != null && isFinite(minNode.value) ) {
+                    if(minNode.value > node.value) {
+                        node.value = minNode.value;
+                        node.action = choices[i];
+                        overallMinNode = minNode;
+                    }
+                    alpha = Math.max(alpha, minNode.value);
+                    if(beta <= alpha) break;
 		}
+	    }
 
 		node.choices = choices;
 	}
