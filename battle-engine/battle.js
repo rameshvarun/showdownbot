@@ -2543,8 +2543,11 @@ Battle = (function () {
 	    function formatPokemon(pokemon) {
 		var text = "";
 		text += pokemon.name + " " + pokemon.hp + "/" + pokemon.maxhp;
-                if(pokemon.status)
+                if(pokemon.status) {
                     text += " " + pokemon.status;
+                    //debug purposes
+                    //text += " duration: " + pokemon.statusData.duration;
+                }
                 if(pokemon.item)
                     text += " @ " + pokemon.item;
                 text += ", L" + (pokemon.level?pokemon.level:'??');

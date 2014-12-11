@@ -692,9 +692,9 @@ var BattleRoom = new JS.Class({
             var condition = pokemon.condition.split(/\/| /);
             this.state.p1.pokemon[i].hp = parseInt(condition[0]);
             if(condition.length > 2) {//add status condition
-                this.state.p1.pokemon[i].setStatus(condition[2]); //necessary?
+                this.state.p1.pokemon[i].setStatus(condition[2]); //necessary
             }
-            if(pokemon.active) { //keep old statusData
+            if(oldPokemon.isActive && oldPokemon.statusData) { //keep old duration
                 pokemon.statusData = oldPokemon.statusData;
             }
 

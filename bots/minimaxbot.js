@@ -193,8 +193,29 @@ function getFeatures(battle) {
         if(battle.p1.pokemon[i].hp) ++features["p1_alive"];
         if(battle.p2.pokemon[i].hp) ++features["p2_alive"];
 
-        if(_.contains(STATUSES, battle.p1.pokemon[i].status)) ++features["p1_" + battle.p1.pokemon[i].status + "_count"];
-        if(_.contains(STATUSES, battle.p2.pokemon[i].status)) ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
+        if(_.contains(STATUSES, battle.p1.pokemon[i].status)) {
+            ++features["p1_" + battle.p1.pokemon[i].status + "_count"];
+            if(battle.p1.pokemon[i].status === "brn" && //weight burn and par differently
+               battle.p1.pokemon[i].baseStats.atk >= 180) {
+                ++features["p1_" + battle.p1.pokemon[i].status + "_count"];
+            }
+            if(battle.p1.pokemon[i].status === "par" &&
+               battle.p1.pokemon[i].baseStats.spe >= 180) {
+                ++features["p1_" + battle.p1.pokemon[i].status + "_count"];
+            }
+        }
+        if(_.contains(STATUSES, battle.p2.pokemon[i].status)) {
+            ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
+            if(battle.p2.pokemon[i].status === "brn" &&
+               battle.p2.pokemon[i].baseStats.atk >= 180) {
+                ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
+            }
+            if(battle.p2.pokemon[i].status === "par" &&
+               battle.p2.pokemon[i].baseStats.spe >= 180) {
+                ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
+            }
+
+        }
     }
 
     // If slp count is greater than 1, set cost to losing the game (sleep clause mod)
@@ -328,6 +349,18 @@ function playerTurn(battle, depth, alpha, beta, givenchoices) {
 	    for(var i = 0; i < choices.length; ++i) {
                 if(choices[i].id === 'wish' && lastMove === 'wish') //don't wish twice in a row
                     continue;
+                if(choices[i].id === 'protect' && lastMove === 'protect') //don't protect twice in a row. Not completely accurate...
+                    continue;
+                if(choices[i].id === 'spikysheild' && lastMove === 'spikyshield') //don't protect twice in a row. Not completely accurate...
+                    continue;
+                if(choices[i].id === 'kingsshield' && lastMove === 'kingssheild') //don't protect twice in a row. Not completely accurate...
+                    continue;
+                if(choices[i].id === 'detect' && lastMove === 'detect') //don't protect twice in a row. Not completely accurate...
+                    continue;
+
+                if(choices[i].id === 'fakeout' && lastMove === 'fakeout') //don't fakeout twice in a row. Not completely accurate...
+                    continue;
+
 		// Try action
 		var minNode = opponentTurn(battle, depth, alpha, beta, choices[i]);
 		node.children.push(minNode);
