@@ -32,7 +32,7 @@ BattleSide = (function () {
 
 		this.team = this.battle.getTeam(this, team);
 		for (var i = 0; i < this.team.length && i < 6; i++) {
-			this.pokemon.push(new BattlePokemon(Tools.getTemplate('unown'), this));
+			this.pokemon.push(new BattlePokemon(Tools.getTemplate('Bulbasaur'), this));
 		}
 		this.pokemonLeft = this.pokemon.length;
 		for (var i = 0; i < this.pokemon.length; i++) {

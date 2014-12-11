@@ -85,7 +85,7 @@ var BattleRoom = new JS.Class({
         }
         logger.info("Could not find " + pokemon.name + " in the battle side, creating new Pokemon.");
         for(var i = battleside.pokemon.length - 1; i >= 0; i--) {
-            if(battleside.pokemon[i].name === "Unown") {
+            if(battleside.pokemon[i].name === "Bulbasaur") {
                 battleside.pokemon[i] = pokemon;
                 return;
             }
@@ -122,9 +122,9 @@ var BattleRoom = new JS.Class({
         }
         var pokemon = this.getPokemon(battleside, pokeName);
 
-        if(!pokemon) { //pokemon has not been defined yet, so choose one of the unowns
-            //note: this will not quite work if the pokemon is actually unown
-            pokemon = this.getPokemon(battleside, "Unown");
+        if(!pokemon) { //pokemon has not been defined yet, so choose Bulbasaur
+            //note: this will not quite work if the pokemon is actually Bulbasaur
+            pokemon = this.getPokemon(battleside, "Bulbasaur");
             var set = this.state.getTemplate(pokeName);
             set.moves = set.randomBattleMoves;
             //set.moves = _.sample(set.randomBattleMoves, 4); //for efficiency, need to implement move ordering
@@ -620,7 +620,8 @@ var BattleRoom = new JS.Class({
             "tier": this.tier
         };
         db.insert(game, function(err, newDoc) {
-            logger.info("Saved result of " + newDoc.title + " to database.");
+	    if(newDoc) logger.info("Saved result of " + newDoc.title + " to database.");
+	    else logger.error("Error saving result to database.");
         });
     },
     receiveRequest: function(request) {
