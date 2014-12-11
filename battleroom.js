@@ -185,9 +185,9 @@ var BattleRoom = new JS.Class({
         //we are no longer newly switched (so we don't fakeout after the first turn)
         pokemon.activeTurns += 1;
         if(!this.isPlayer(player)) { //anticipate more about the Pokemon's moves
-            if(pokemon.trueMoves.indexOf(move) < 0) {
-                pokemon.trueMoves.push(move);
-                logger.info("Determined that " + pokeName + " can use " + move);
+            if(pokemon.trueMoves.indexOf(toId(move)) < 0 && pokemon.trueMoves.length < 4) {
+                pokemon.trueMoves.push(toId(move));
+                logger.info("Determined that " + pokeName + " can use " + toId(move));
                 //if we have collected all of the moves, eliminate all other possibilities
                 if(pokemon.trueMoves.length >= 4) {
                     logger.info("Collected all of " + pokeName + "'s moves!");
