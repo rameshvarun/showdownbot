@@ -59,8 +59,11 @@ module.exports = {
   "p1_hp": 1024,
   "p2_hp": -1024,
 
-  "p1_alive": 1024,
-  "p2_alive": -1024,
+  "p1_alive": 512, //was 1024 //TODO: incremental p1_alive? so hp when a pokemon is at full health is worth more than when a pokemon is at partial health
+  "p2_alive": -512, //was -1024
+
+  "p1_fast_alive": 512,
+  "p2_fast_alive": -512,
 
   // Status effects
   "p1_psn_count": -100,

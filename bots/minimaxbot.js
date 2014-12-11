@@ -170,6 +170,10 @@ function getFeatures(battle) {
     features["p1_alive"] = 0;
     features["p2_alive"] = 0;
 
+    //alive fast pokemon?
+    features["p1_fast_alive"] = 0;
+    features["p2_fast_alive"] = 0;
+
     //status effects. TODO: some status effects are worse on some pokemon than others
     //paralyze: larger effects on fast, frail pokemon
     //burn: larger effects on physical attackers
@@ -193,9 +197,16 @@ function getFeatures(battle) {
         if(_.contains(STATUSES, battle.p2.pokemon[i].status)) ++features["p2_" + battle.p2.pokemon[i].status + "_count"];
     }
 
-    // Cap sleep count at 1, due to Sleep Cause mod
-    features["p1_slp_count"] = Math.min(features["p1_slp_count"], 1);
-    features["p2_slp_count"] = Math.min(features["p2_slp_count"], 1);
+    // If slp count is greater than 1, set cost to losing the game (sleep clause mod)
+    // Record this for opponent as well
+    if(features["p1_slp_count"] > 1)
+        features["p1_slp_count"] = -GAME_END_REWARD;
+    if(features["p2_slp_count"] < 1)
+        features["p2_slp_count"] = -GAME_END_REWARD;
+    //features["p1_slp_count"] = Math.min(features["p1_slp_count"], 1);
+    //features["p2_slp_count"] = Math.min(features["p2_slp_count"], 1);
+
+    //If sleep count is
 
     //items: prefer to have items rather than lose them (such as berries, focus sash, ...)
     features.items = _.reduce(battle.p1.pokemon, function (memo, pokemon) {
