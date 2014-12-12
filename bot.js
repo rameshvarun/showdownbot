@@ -202,7 +202,7 @@ function recieve(data) {
 		if(ROOMS[roomid]) {
 			ROOMS[roomid].recieve(data);
 		} else {
-			log.error("Room of id " + roomid + " does not exist to send data to.");
+			logger.error("Room of id " + roomid + " does not exist to send data to.");
 		}
 		return;
 	}
