@@ -280,6 +280,7 @@ function eval(battle) {
 var overallMinNode = {};
 var lastMove = '';
 var decide = module.exports.decide = function(battle, choices) {
+    var startTime = new Date();
     battle.start();
 
     var MAX_DEPTH = 2; //for now...
@@ -289,6 +290,8 @@ var decide = module.exports.decide = function(battle, choices) {
     if(overallMinNode.action)
         logger.info("Predicted opponent action: " + overallMinNode.action.type + " " + overallMinNode.action.id);
     lastMove = maxNode.action.id;
+    var endTime = new Date();
+    logger.info("Decision took: " + (endTime - startTime) / 1000 + " seconds");
     return {
 	type: maxNode.action.type,
 	id: maxNode.action.id,

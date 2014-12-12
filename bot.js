@@ -8,7 +8,7 @@ program
 	.option('--net [action]', "'create' - generate a new network. 'update' - use and modify existing network. 'use' - use, but don't modify network. 'none' - use hardcoded weights. ['none']", 'none')
 	.option('--algorithm [algorithm]', "Can be 'minimax', 'greedy', or 'random'. ['minimax']", "minimax")
 	.option('--account [file]', "File from which to load credentials. ['account.json']", "account.json")
-	.option('--nosave', "Don't save games to the in-memeory db.")
+	.option('--nosave', "Don't save games to the in-memory db.")
 	.option('--nolog', "Don't append to log files.")
         .option('--startchallenging', "Start out challenging, instead of requiring a manual activation first.")
 	.parse(process.argv);
