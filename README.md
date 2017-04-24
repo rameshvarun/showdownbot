@@ -15,7 +15,7 @@ In order to actually play games you must create an account on Pokemon Showdown. 
 
     {
         "username" : "sillybot",
-        "password": : "arbitrary password",
+        "password": "arbitrary password",
         "message" : "gl hf"
     }
 
