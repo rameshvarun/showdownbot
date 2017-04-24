@@ -10,7 +10,7 @@ BattlePokemon = require('./battlepokemon')
 BattleSide = (function () {
 	function BattleSide(name, battle, n, team) {
 		var sideScripts = battle.data.Scripts.side;
-		if (sideScripts) Object.merge(this, sideScripts);
+		if (sideScripts) Object.assign(this, sideScripts);
 
 		this.battle = battle;
 		this.n = n;

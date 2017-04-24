@@ -98,7 +98,7 @@ module.exports = (function () {
 						// {inherit: true} can be used to modify only parts of the parent data,
 						// instead of overwriting entirely
 						delete data[dataType][i].inherit;
-						Object.merge(data[dataType][i], parentData[dataType][i], false, false);
+						Object.assign(data[dataType][i], parentData[dataType][i], false, false);
 					}
 				}
 			});
@@ -233,10 +233,10 @@ module.exports = (function () {
 			}
 			name = template.species || template.name || name;
 			if (this.data.FormatsData[id]) {
-				Object.merge(template, this.data.FormatsData[id]);
+				Object.assign(template, this.data.FormatsData[id]);
 			}
 			if (this.data.Learnsets[id]) {
-				Object.merge(template, this.data.Learnsets[id]);
+				Object.assign(template, this.data.Learnsets[id]);
 			}
 			if (!template.id) template.id = id;
 			if (!template.name) template.name = name;

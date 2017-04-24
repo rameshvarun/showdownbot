@@ -12,7 +12,7 @@ BattlePokemon = (function () {
 		this.battle = side.battle;
 
 		var pokemonScripts = this.battle.data.Scripts.pokemon;
-		if (pokemonScripts) Object.merge(this, pokemonScripts);
+		if (pokemonScripts) Object.assign(this, pokemonScripts);
 
 		if (typeof set === 'string') set = {name: set};
 
@@ -427,7 +427,7 @@ BattlePokemon = (function () {
 	BattlePokemon.prototype.getRequestData = function () {
 		var lockedMove = this.getLockedMove();
 
-		// Information should be restricted for the last active Pokémon
+		// Information should be restricted for the last active Pokï¿½mon
 		var isLastActive = this.isLastActive();
 		var data = {moves: this.getMoves(lockedMove, isLastActive)};
 
