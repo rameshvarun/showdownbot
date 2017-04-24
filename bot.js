@@ -258,7 +258,7 @@ function recieve(data) {
 						send("/accept " + user);
 					} else {
 						logger.warn("Won't accept challenge of type: " + challenges.challengesFrom[user]);
-						send("/decline " + user);
+						send("/reject " + user);
 					}
 				}
 			}
