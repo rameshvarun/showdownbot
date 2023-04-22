@@ -7,7 +7,7 @@
 
 ![Screenshot](./screenshot.png)
 
-Percymon is a Pokemon battling AI that plays matches on Pokemon Showdown. Percymon is built using Node.js.
+Percymon is a Pokemon battling AI that plays matches on Pokemon Showdown. Percymon is built using Node.js. Check out [the full project write-up here](https://varunramesh.net/content/documents/cs221-final-report.pdf).
 
 ## Setting up the repository
 
