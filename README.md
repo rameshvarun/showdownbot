@@ -1,7 +1,11 @@
-Percymon: A Pokemon Showdown AI
-===========
+# Percymon: A Pokemon Showdown AI
 
-![Imgur](http://i.imgur.com/uasrTOy.png)
+> This project was built for an old version of Pokemon Showdown and won't work with newer versions. You might have luck checking out some of the forks
+> - https://github.com/shingaryu/showdownbot
+> - https://github.com/amharfm/percymon-gen7
+> - [More Forks](https://github.com/rameshvarun/showdownbot/forks?include=active&page=1&period=&sort_by=stargazer_counts)
+
+![Screenshot](./screenshot.png)
 
 Percymon is a Pokemon battling AI that runs on the Pokemon Showdown server. Percymon is built using Node.js.
 
