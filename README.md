@@ -1,6 +1,6 @@
 # Percymon: A Pokemon Showdown AI
 
-> This project was built for an old version of Pokemon Showdown and won't work with newer versions. You might have luck checking out some of the forks
+> This project was built for an old version of Pokemon Showdown and won't work with newer versions. You might have luck checking out some of the forks.
 > - https://github.com/shingaryu/showdownbot
 > - https://github.com/amharfm/percymon-gen7
 > - [More Forks](https://github.com/rameshvarun/showdownbot/forks?include=active&page=1&period=&sort_by=stargazer_counts)
